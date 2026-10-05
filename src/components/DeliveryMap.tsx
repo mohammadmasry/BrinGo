@@ -70,15 +70,14 @@ export default function DeliveryMap({
       attributionControl: false,
     })
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 20,
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
     L.control.attribution({ position: 'bottomleft', prefix: false })
-      .addAttribution('© <a href="https://carto.com">CARTO</a> · © <a href="https://openstreetmap.org">OSM</a>')
+      .addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors')
       .addTo(map)
 
     map.on('click', async (e) => {
