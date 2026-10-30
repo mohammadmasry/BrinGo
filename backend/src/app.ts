@@ -7,6 +7,7 @@ import surveysRouter from './routes/surveys'
 import feedbackRouter from './routes/feedback'
 import partnersRouter from './routes/partners'
 import conversationsRouter from './routes/conversations'
+import aiRouter from './routes/ai'
 
 const app = express()
 
@@ -23,6 +24,8 @@ app.use(cors({
   credentials: true,
 }))
 
+// Photos for the image endpoint arrive as base64, so it needs a larger body limit
+app.use('/api/ai/image', express.json({ limit: '4mb' }))
 app.use(express.json())
 
 app.use('/api/auth', authRouter)
@@ -31,6 +34,7 @@ app.use('/api/surveys', surveysRouter)
 app.use('/api/feedback', feedbackRouter)
 app.use('/api/partners', partnersRouter)
 app.use('/api/conversations', conversationsRouter)
+app.use('/api/ai', aiRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

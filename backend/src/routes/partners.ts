@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
+import { requireAdmin } from '../middleware/auth'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -34,7 +35,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 })
 
 // GET /api/partners  — list all applications (admin/debug)
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+router.get('/', requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
     const applications = await prisma.partnerApplication.findMany({ orderBy: { createdAt: 'desc' } })
     res.json(applications)

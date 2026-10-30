@@ -56,7 +56,7 @@ Delivery zones (`src/lib/zones.ts`) set whicd:
 
 ## AI assistant
 
-The Easy Order chat (`src/lib/groq.ts`) uses the [Groq API](https://groq.com):
+The Easy Order chat (`src/lib/groq.ts`, proxied through `backend/src/routes/ai.ts` so the API key stays on the server) uses the [Groq API](https://groq.com):
 
 - **Chat and order detection:** `llama-3.3-70b-versatile` answers questions about Bringo. It pulls out pickup,
 drop-off, item and size, and suggests the ch

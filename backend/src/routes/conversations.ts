@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
+import { requireAdmin } from '../middleware/auth'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -40,7 +41,7 @@ router.post('/:id/messages', async (req: Request, res: Response): Promise<void> 
 })
 
 // GET /api/conversations/:id — full conversation with messages
-router.get('/:id', async (req: Request, res: Response): Promise<void> => {
+router.get('/:id', requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const conv = await prisma.conversation.findUnique({
       where: { id: req.params.id },
@@ -54,8 +55,8 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
-// GET /api/conversations — all conversations (debug)
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+// GET /api/conversations — all conversations (admin only)
+router.get('/', requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
     const all = await prisma.conversation.findMany({
       orderBy: { createdAt: 'desc' },

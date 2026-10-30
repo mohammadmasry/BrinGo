@@ -37,6 +37,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  isConfigured: Boolean(BASE_URL),
+
   auth: {
     register(body: {
       email: string
@@ -101,6 +103,15 @@ export const api = {
     },
     addMessage(id: string, body: { role: string; inputType: string; content: string }): Promise<void> {
       return request(`/api/conversations/${id}/messages`, { method: 'POST', body: JSON.stringify(body) })
+    },
+  },
+
+  ai: {
+    chat(messages: { role: 'user' | 'assistant'; content: string }[]): Promise<{ text: string }> {
+      return request('/api/ai/chat', { method: 'POST', body: JSON.stringify({ messages }) })
+    },
+    image(body: { base64: string; mimeType: string }): Promise<{ text: string }> {
+      return request('/api/ai/image', { method: 'POST', body: JSON.stringify(body) })
     },
   },
 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
+import { verifyToken } from '../lib/jwt'
 
 declare global {
   namespace Express {
@@ -17,15 +17,22 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return
   }
 
-  const token = authHeader.slice(7)
-  const secret = process.env.JWT_SECRET ?? 'bringo-dev-secret-change-in-prod'
-
   try {
-    const payload = jwt.verify(token, secret) as { userId: string; role: string }
+    const payload = verifyToken(authHeader.slice(7))
     req.userId = payload.userId
     req.userRole = payload.role
     next()
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' })
   }
+}
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  requireAuth(req, res, () => {
+    if (req.userRole !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' })
+      return
+    }
+    next()
+  })
 }

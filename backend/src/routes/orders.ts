@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, requireAdmin } from '../middleware/auth'
+import { verifyToken } from '../lib/jwt'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -23,10 +24,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     let userId: string | undefined
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
-        const jwt = await import('jsonwebtoken')
-        const secret = process.env.JWT_SECRET ?? 'bringo-dev-secret-change-in-prod'
-        const payload = jwt.default.verify(authHeader.slice(7), secret) as { userId: string }
-        userId = payload.userId
+        userId = verifyToken(authHeader.slice(7)).userId
       } catch {
         // token invalid — proceed without userId
       }
@@ -66,8 +64,8 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
   }
 })
 
-// GET /api/orders/all  (admin/debug — all orders)
-router.get('/all', async (_req: Request, res: Response): Promise<void> => {
+// GET /api/orders/all  (admin only — all orders)
+router.get('/all', requireAdmin, async (_req: Request, res: Response): Promise<void> => {
   try {
     const orders = await prisma.order.findMany({
       orderBy: { createdAt: 'desc' },

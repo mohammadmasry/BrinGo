@@ -1,16 +1,11 @@
 import { Router, Request, Response } from 'express'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import { PrismaClient } from '@prisma/client'
 import { requireAuth } from '../middleware/auth'
+import { signToken } from '../lib/jwt'
 
 const router = Router()
 const prisma = new PrismaClient()
-
-function makeToken(userId: string, role: string): string {
-  const secret = process.env.JWT_SECRET ?? 'bringo-dev-secret-change-in-prod'
-  return jwt.sign({ userId, role }, secret, { expiresIn: '30d' })
-}
 
 // POST /api/auth/register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
@@ -44,7 +39,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       data: { email, firstName, lastName, passwordHash, phone: phone ?? null },
     })
 
-    const token = makeToken(user.id, user.role)
+    const token = signToken({ userId: user.id, role: user.role })
     res.status(201).json({
       token,
       user: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role },
@@ -77,7 +72,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const token = makeToken(user.id, user.role)
+    const token = signToken({ userId: user.id, role: user.role })
     res.json({
       token,
       user: { id: user.id, firstName: user.firstName, email: user.email, role: user.role },
