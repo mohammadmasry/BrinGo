@@ -6,18 +6,18 @@ const DEFAULTS = {
   reducedMembers: 30,
   businessMembers: 5,
 
-  regularFee: 50,
+  regularFee: 60,
   regularFeePeriod: "year",
-  reducedFee: 30,
+  reducedFee: 36,
   reducedFeePeriod: "year",
   businessFee: 120,
   businessFeePeriod: "year",
 
   deliveriesPerMemberMonth: 2,
-  avgDeliveryFee: 5.5,
+  avgDeliveryFee: 8.5,
 
   errandTripsPerMemberMonth: 2,
-  avgErrandFee: 20,
+  avgErrandFee: 8.5,
 
   dseeFundingEnabled: false,
   dseeFundingAmount: 500,
@@ -25,9 +25,9 @@ const DEFAULTS = {
   courierPayModel: "minimumWage",
   managementPayModel: "minimumWage",
   minimumWage: 13.9,
-  employerOnCostPct: 4,
+  employerOnCostPct: 31,
   courierPersons: 4,
-  tripMinutes: 45,
+  tripMinutes: 25,
   managementHoursMonth: 20,
   allowancePerPersonYear: 960,
 
@@ -514,7 +514,7 @@ export default function ProfitLossCalculator() {
             <PayModelSelect label={t.managementPay} value={a.managementPayModel} onChange={(v) => update("managementPayModel", v)} tooltip="Minimum wage: management hours/month × 12 × €13.90 × management persons × 1.04. Allowance: management persons × €960/year." t={t} />
             <SliderField label={t.couriers} value={a.courierPersons} min={1} max={50} onChange={(v) => update("courierPersons", v)} tooltip="Number of active couriers. Also determines staff management demand." />
             <DisplayField label={t.management} value={`${r.managementPersons} ${t.persons}`} tooltip="Automatically calculated: 1 staff management person per 10 couriers." />
-            <SliderField label={t.tripTime} value={a.tripMinutes} min={15} max={120} step={15} suffix={t.minutes} onChange={(v) => update("tripMinutes", v)} tooltip="Applies to deliveries and errand trips." />
+            <SliderField label={t.tripTime} value={a.tripMinutes} min={10} max={120} step={5} suffix={t.minutes} onChange={(v) => update("tripMinutes", v)} tooltip="Courier minutes per order. In a shared shopping round (3–4 orders in ~90 min) this is ~25 min." />
             <SliderField label={t.pmHoursMonth} value={a.managementHoursMonth} min={0} max={40} step={0.5} suffix="h" onChange={(v) => update("managementHoursMonth", v)} tooltip="Only relevant if staff management is calculated with minimum wage." />
             <SliderField label={t.carShare} value={a.carSharePct} min={0} max={100} suffix="%" onChange={(v) => update("carSharePct", v)} tooltip="Car trips = total orders/year × car share." />
             <SliderField label={t.kmPerCarTrip} value={a.kmPerCarTrip} min={0} max={40} suffix="km" onChange={(v) => update("kmPerCarTrip", v)} tooltip="Car costs = car trips × km per car trip × €0.30/km." />

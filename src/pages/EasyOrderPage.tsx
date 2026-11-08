@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../hooks/useLang'
 import { getSession } from '../lib/session'
 import { askGroq, analyzeImage, type DetectedOrder, type GroqMessage } from '../lib/groq'
+import { calculatePrice } from '../lib/pricing'
 import { api } from '../lib/api'
 
 interface ChatMsg {
@@ -18,7 +19,8 @@ interface OrderItem {
   qty: number
 }
 
-const PRICES: Record<'S' | 'M' | 'L', number> = { S: 5.0, M: 6.0, L: 7.5 }
+const orderPrice = (o: DetectedOrder) =>
+  calculatePrice({ schedule: o.slotId === 'urgent' ? 'urgent' : 'round', orderType: 'delivery', size: o.size }).total
 const TEMPLATE_KEY = 'bringo_order_template'
 const LAST_ORDER_KEY = 'bringo_last_order'
 
@@ -393,7 +395,7 @@ export default function EasyOrderPage() {
                         {t.addItem}
                       </button>
                       <div className="flex justify-end mt-2 pt-2 border-t border-gray-100">
-                        <p className="text-2xl font-black text-gray-900">€{PRICES[msg.order.size].toFixed(2)}</p>
+                        <p className="text-2xl font-black text-gray-900">€{orderPrice(msg.order).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>

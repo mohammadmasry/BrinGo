@@ -5,8 +5,7 @@ export interface DetectedOrder {
   dropoff: string
   description: string
   size: 'S' | 'M' | 'L'
-  slotId?: string            // e.g. "s1416" — pre-selects time slot in step 4
-  scheduleDay?: 'today' | 'tomorrow'
+  slotId?: 'tue' | 'fri' | 'urgent'   // pre-selects shopping round or urgent in step 4
 }
 
 export interface GroqMessage {
@@ -50,9 +49,7 @@ export async function askGroq(
             dropoff: parsed.dropoff,
             description: parsed.description || '',
             size: (['S', 'M', 'L'] as const).includes(parsed.size) ? parsed.size : 'M',
-            slotId: parsed.slotId && parsed.slotId !== 'null' ? parsed.slotId : undefined,
-            scheduleDay: parsed.scheduleDay === 'today' || parsed.scheduleDay === 'tomorrow'
-              ? parsed.scheduleDay : undefined,
+            slotId: ['tue', 'fri', 'urgent'].includes(parsed.slotId) ? parsed.slotId : undefined,
           }
         }
       } catch {}

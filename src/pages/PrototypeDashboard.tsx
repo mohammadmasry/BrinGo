@@ -29,7 +29,7 @@ const FEATURES: Feature[] = [
   { label: 'Multi-city expansion', status: 'out-of-scope', note: 'v1 is Pfarrkirchen only' },
   { label: 'Restaurant marketplace / menu ordering', status: 'out-of-scope' },
   { label: 'Native iOS / Android app', status: 'out-of-scope', note: 'Web-first; PWA possible as next step' },
-  { label: 'Subscription pricing model', status: 'out-of-scope' },
+  { label: 'Membership (€5/month, €3 reduced)', status: 'planned' },
 ]
 
 const STATUS_META: Record<Status, { label: string; bg: string; text: string; dot: string }> = {

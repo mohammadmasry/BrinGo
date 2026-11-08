@@ -15,8 +15,9 @@ const tr = {
     picked_upSub: 'Jetzt weiter zum Zielort.',
     delivered: 'Geliefert!',
     deliveredSub: 'Auftrag erfolgreich abgeschlossen.',
+    paidHourly: 'Du wirst stündlich bezahlt (Minijob, €13,90/Std.).',
     pickup: 'Abholung', dropoff: 'Zielort',
-    item: 'Artikel', earnings: 'Verdienst',
+    item: 'Artikel', earnings: 'Auftragswert',
     markPickedUp: 'Abgeholt',
     markDelivered: 'Zugestellt',
     backToOrders: 'Zurück zu den Aufträgen',
@@ -33,8 +34,9 @@ const tr = {
     picked_upSub: 'Now heading to the dropoff.',
     delivered: 'Delivered!',
     deliveredSub: 'Order successfully completed.',
+    paidHourly: "You're paid by the hour (Minijob, €13.90/h).",
     pickup: 'Pickup', dropoff: 'Dropoff',
-    item: 'Item', earnings: 'Earnings',
+    item: 'Item', earnings: 'Order value',
     markPickedUp: 'Mark as picked up',
     markDelivered: 'Mark as delivered',
     backToOrders: 'Back to orders',
@@ -115,7 +117,7 @@ export default function CourierActiveOrderPage() {
         </div>
         <h1 className="text-4xl font-black text-gray-900 mb-2">{t.delivered}</h1>
         <p className="text-gray-400 mb-3 max-w-xs">{t.deliveredSub}</p>
-        <p className="text-3xl font-black text-green-600 mb-8">+€{order.price.toFixed(2)}</p>
+        <p className="text-sm font-semibold text-green-700 bg-green-50 px-4 py-2 rounded-xl mb-8">{t.paidHourly}</p>
         <button
           onClick={() => navigate('/home/courier', { state: { firstName } })}
           className="px-8 py-4 rounded-xl font-semibold text-white"

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLang } from '../hooks/useLang'
 import { askGroq, type DetectedOrder, type GroqMessage } from '../lib/groq'
+import { calculatePrice } from '../lib/pricing'
 
 interface ChatMsg {
   role: 'user' | 'assistant'
@@ -40,7 +41,8 @@ const tr = {
   },
 }
 
-const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
+const orderPrice = (o: DetectedOrder) =>
+  calculatePrice({ schedule: o.slotId === 'urgent' ? 'urgent' : 'round', orderType: 'delivery', size: o.size }).total
 
 function TypingIndicator() {
   return (
@@ -91,7 +93,7 @@ function OrderCard({
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <p className="text-xs text-gray-500">{order.description}</p>
             <span className="text-sm font-black text-gray-900 ml-2">
-              €{PRICES[order.size].toFixed(2)}
+              €{orderPrice(order).toFixed(2)}
             </span>
           </div>
         )}

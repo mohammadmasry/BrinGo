@@ -19,7 +19,7 @@ const tr = {
     steps: [
       { icon: '📋', title: 'Bestellung wählen', desc: 'Sehen Sie alle offenen Aufträge in Ihrer Nähe.' },
       { icon: '🚴', title: 'Liefern', desc: 'Holen Sie die Bestellung ab und bringen Sie sie zum Kunden.' },
-      { icon: '💶', title: 'Verdienen', desc: 'Erhalten Sie Ihre Vergütung direkt nach der Lieferung.' },
+      { icon: '💶', title: 'Verdienen', desc: 'Minijob mit Stundenlohn (€13,90/Std.), bis €603 im Monat.' },
     ],
   },
   en: {
@@ -36,7 +36,7 @@ const tr = {
     steps: [
       { icon: '📋', title: 'Pick an order', desc: 'See all open orders near you.' },
       { icon: '🚴', title: 'Deliver', desc: 'Pick up the order and bring it to the customer.' },
-      { icon: '💶', title: 'Earn', desc: 'Receive your payment right after delivery.' },
+      { icon: '💶', title: 'Earn', desc: 'Minijob paid by the hour (€13.90/h), up to €603 a month.' },
     ],
   },
 }

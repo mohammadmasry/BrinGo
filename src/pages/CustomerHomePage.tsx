@@ -21,7 +21,7 @@ const tr = {
     switchToStandard: 'Zurück zu Standard',
     ctaTitle: 'Lieferung erstellen',
     ctaSub: 'Ein verifizierter Student holt es ab und bringt es zu Ihnen.',
-    areaLabel: 'Gebiet', deliveryLabel: 'Ø Lieferzeit',
+    areaLabel: 'Gebiet', deliveryLabel: 'Einkaufsrunden',
     ordersTitle: 'Ihre Aufträge',
     emptyTitle: 'Noch keine Aufträge', emptySub: 'Ihre Lieferungen werden hier angezeigt',
     activeOrderTitle: 'Aktive Lieferung', trackBtn: 'Verfolgen',
@@ -43,7 +43,7 @@ const tr = {
     switchToStandard: 'Back to Standard',
     ctaTitle: 'Create a delivery',
     ctaSub: 'A verified student picks it up and brings it to you.',
-    areaLabel: 'Area', deliveryLabel: 'Avg. delivery',
+    areaLabel: 'Area', deliveryLabel: 'Shopping rounds',
     ordersTitle: 'Your orders',
     emptyTitle: 'No orders yet', emptySub: 'Your deliveries will appear here',
     activeOrderTitle: 'Active delivery', trackBtn: 'Track',
@@ -261,7 +261,7 @@ export default function CustomerHomePage() {
               </svg>
             </div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.deliveryLabel}</p>
-            <p className="text-sm font-bold text-gray-900">~25 min</p>
+            <p className="text-sm font-bold text-gray-900">{lang === 'de' ? 'Di & Fr, 9–12 Uhr' : 'Tue & Fri, 9–12'}</p>
           </div>
         </div>
 

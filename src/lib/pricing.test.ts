@@ -1,93 +1,59 @@
 import { describe, it, expect } from 'vitest'
-import { calculatePrice, getTimeSlots, getSlotById } from './pricing'
+import { calculatePrice, getUpcomingRounds, localIso, ROUND_PRICE, URGENT_PRICE } from './pricing'
 
-const PICKUP = 'CAMPUS Pfarrkirchen, Petersbogen 1'
-const DROPOFF = 'Stadtplatz 1, 84347 Pfarrkirchen'
-
-describe('calculatePrice — base prices', () => {
-  it('size S base is €5.00', () => {
-    expect(calculatePrice(PICKUP, DROPOFF, 'S', 'later', '', 1, '1-5', 0).base).toBe(5.00)
+describe('calculatePrice', () => {
+  it('shopping round costs €8.50', () => {
+    expect(calculatePrice({ schedule: 'round', orderType: 'shopping' }).total).toBe(8.5)
   })
-  it('size M base is €6.00', () => {
-    expect(calculatePrice(PICKUP, DROPOFF, 'M', 'later', '', 1, '1-5', 0).base).toBe(6.00)
+  it('urgent order costs €15.00', () => {
+    const r = calculatePrice({ schedule: 'urgent', orderType: 'shopping' })
+    expect(r.total).toBe(15)
+    expect(r.isUrgent).toBe(true)
   })
-  it('size L base is €7.50', () => {
-    expect(calculatePrice(PICKUP, DROPOFF, 'L', 'later', '', 1, '1-5', 0).base).toBe(7.50)
+  it('adds €2 per extra store for shopping', () => {
+    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', stores: 2 }).total).toBe(10.5)
+    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', stores: 3 }).total).toBe(12.5)
+  })
+  it('caps stores at 3', () => {
+    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', stores: 9 }).storesSurcharge).toBe(4)
+  })
+  it('ignores stores for deliveries', () => {
+    expect(calculatePrice({ schedule: 'round', orderType: 'delivery', stores: 3 }).storesSurcharge).toBe(0)
+  })
+  it('adds €1.50 for large deliveries only', () => {
+    expect(calculatePrice({ schedule: 'round', orderType: 'delivery', size: 'L' }).total).toBe(10)
+    expect(calculatePrice({ schedule: 'round', orderType: 'delivery', size: 'M' }).total).toBe(ROUND_PRICE)
+    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', size: 'L' }).total).toBe(ROUND_PRICE)
+  })
+  it('total equals sum of components', () => {
+    const r = calculatePrice({ schedule: 'urgent', orderType: 'delivery', size: 'L' })
+    expect(r.total).toBe(URGENT_PRICE + r.largeSurcharge)
   })
 })
 
-describe('calculatePrice — express', () => {
-  it('adds €10 express surcharge', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'S', 'express', '', 1, '1-5', null)
-    expect(r.expressSurcharge).toBe(10)
-    expect(r.isExpress).toBe(true)
+describe('getUpcomingRounds', () => {
+  it('only returns Tuesday and Friday rounds', () => {
+    const rounds = getUpcomingRounds(new Date(2026, 10, 8, 10), 6) // Sun 8 Nov 2026
+    rounds.forEach(r => expect([2, 5]).toContain(new Date(r.dateIso + 'T12:00:00').getDay()))
   })
-  it('no peak surcharge on express', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'S', 'express', '', 1, '1-5', null)
-    expect(r.peakSurcharge).toBe(0)
+  it('lists the next round first', () => {
+    const [first] = getUpcomingRounds(new Date(2026, 10, 8, 10)) // Sunday
+    expect(first.dateIso).toBe('2026-11-10') // Tuesday
+    expect(first.id).toBe('tue')
   })
-})
-
-describe('calculatePrice — slot price modifiers', () => {
-  it('off-peak slot (−10%) reduces price', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'S', 'later', '', 1, '1-5', -0.10)
-    expect(r.peakSurcharge).toBeLessThan(0)
-    expect(r.isPeak).toBe(false)
+  it('closes a round at 20:00 the evening before', () => {
+    const before = getUpcomingRounds(new Date(2026, 10, 9, 19, 59)) // Mon 19:59
+    const after = getUpcomingRounds(new Date(2026, 10, 9, 20, 0))   // Mon 20:00
+    expect(before[0].dateIso).toBe('2026-11-10')
+    expect(after[0].dateIso).toBe('2026-11-13') // Friday
   })
-  it('peak slot (+15%) increases price', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'S', 'later', '', 1, '1-5', 0.15)
-    expect(r.peakSurcharge).toBeGreaterThan(0)
-    expect(r.isPeak).toBe(true)
-  })
-  it('neutral slot (0) has zero surcharge', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'S', 'later', '', 1, '1-5', 0)
-    expect(r.peakSurcharge).toBe(0)
+  it('returns the requested number of rounds', () => {
+    expect(getUpcomingRounds(new Date(2026, 10, 8), 4)).toHaveLength(4)
   })
 })
 
-describe('calculatePrice — total integrity', () => {
-  it('total equals sum of all components', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'M', 'later', '', 2, '6-15', -0.05)
-    const expected = Math.round(
-      (r.base + r.distanceSurcharge + r.storesSurcharge + r.itemsSurcharge + r.peakSurcharge + r.expressSurcharge) * 100
-    ) / 100
-    expect(r.total).toBe(expected)
-  })
-  it('total is always positive', () => {
-    const r = calculatePrice(PICKUP, DROPOFF, 'S', 'later', '', 1, '1-5', -0.10)
-    expect(r.total).toBeGreaterThan(0)
-  })
-})
-
-describe('getTimeSlots', () => {
-  it('returns 7 slots for a future date', () => {
-    const future = new Date()
-    future.setDate(future.getDate() + 2)
-    const iso = future.toISOString().split('T')[0]
-    expect(getTimeSlots(iso)).toHaveLength(7)
-  })
-  it('filters past slots for today', () => {
-    const today = new Date().toISOString().split('T')[0]
-    const slots = getTimeSlots(today)
-    const nowHour = new Date().getHours()
-    slots.forEach(s => expect(s.start).toBeGreaterThan(nowHour))
-  })
-})
-
-describe('getSlotById', () => {
-  it('returns 14–16 off-peak slot', () => {
-    const s = getSlotById('s1416')
-    expect(s?.start).toBe(14)
-    expect(s?.priceMod).toBe(-0.10)
-    expect(s?.tag).toBe('discount')
-  })
-  it('returns 20–22 peak slot', () => {
-    const s = getSlotById('s2022')
-    expect(s?.start).toBe(20)
-    expect(s?.priceMod).toBe(0.15)
-    expect(s?.tag).toBe('surcharge')
-  })
-  it('returns undefined for unknown id', () => {
-    expect(getSlotById('nonexistent')).toBeUndefined()
+describe('localIso', () => {
+  it('uses the local date, not UTC', () => {
+    expect(localIso(new Date(2026, 0, 1, 0, 30))).toBe('2026-01-01')
   })
 })

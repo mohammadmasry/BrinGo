@@ -3,9 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
-import { calculatePrice, getTimeSlots, getSlotById, type ItemRange, type TimeSlot } from '../lib/pricing'
+import { calculatePrice, getUpcomingRounds, type Schedule, type UpcomingRound } from '../lib/pricing'
 import { setActiveOrder } from '../lib/orderStore'
-import { detectPostcode, getAllowedDays, getZoneName } from '../lib/zones'
+import { detectPostcode, isInServiceArea } from '../lib/zones'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
 const PICKUP_PRESETS = [
@@ -28,7 +28,7 @@ const tr = {
     typeTitle: 'Was möchten Sie?', typeSub: 'Wählen Sie die Art Ihres Auftrags.',
     shoppingTitle: 'Einkaufen & Liefern', shoppingDesc: 'Kurier kauft für Sie ein und liefert es zu Ihnen',
     deliveryTitle: 'Nur Liefern', deliveryDesc: 'Kurier holt Ihr Paket ab und bringt es ans Ziel',
-    shoppingFrom: 'ab €5.00', deliveryFrom: 'ab €5.00',
+    shoppingFrom: 'ab €8,50', deliveryFrom: 'ab €8,50',
     // steps 1–2 (address labels adapt per type)
     s1TitleShopping: 'Laden / Abholort', s1SubShopping: 'Bei welchem Geschäft soll eingekauft werden?',
     s1TitleDelivery: 'Abholung', s1SubDelivery: 'Wo soll Ihr Paket abgeholt werden?',
@@ -36,7 +36,7 @@ const tr = {
     // step 3 shopping
     s3TitleShopping: 'Einkaufsauftrag', s3SubShopping: 'Was und wo soll für Sie eingekauft werden?',
     shoppingListLabel: 'Einkaufszettel', shoppingListPh: 'z.B. Milch 1L, Brot (Vollkorn), 6 Eier…',
-    storesLabel: 'Anzahl der Läden', store1: 'Laden', store2: 'Läden', store3: 'Läden',
+    storesLabel: 'Anzahl der Läden (+€2 je weiterem Laden)', store1: 'Laden', store2: 'Läden', store3: 'Läden',
     itemsLabel: 'Anzahl der Artikel', itemsFew: 'wenige', itemsMed: 'mittel', itemsMany: 'viele',
     // step 3 delivery
     s3TitleDelivery: 'Was wird geliefert?', s3SubDelivery: 'Beschreiben Sie Ihr Paket für den Kurier.',
@@ -45,9 +45,13 @@ const tr = {
     sizeLabel: 'Paketgröße',
     sSmallTitle: 'Klein', sSmallSub: 'Umschlag, Dokumente',
     sMediumTitle: 'Mittel', sMediumSub: 'Bücher, Tragetasche',
-    sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile',
+    sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile · +€1,50',
     // step 4
-    s4Title: 'Wann?', s4Sub: 'Soll die Lieferung jetzt oder später erfolgen?',
+    s4Title: 'Wann?', s4Sub: 'Wählen Sie eine Einkaufsrunde oder eine dringende Lieferung.',
+    roundsTitle: 'Einkaufsrunden', roundsSub: 'Ein Kurier erledigt mehrere Aufträge in einer Runde. Deshalb ist es günstiger.',
+    roundCutoff: 'Bestellschluss', noRounds: 'Gerade ist keine Runde buchbar.',
+    urgentLabel: 'Dringend', urgentSub: 'Eigene Fahrt, ca. 45 Min.',
+    outsideArea: 'Bringo liefert derzeit nur in Pfarrkirchen (84347).',
     // step 5
     s5Title: 'Bestellung prüfen', s5Sub: 'Alles korrekt?',
     orderTypeBadgeShopping: 'Einkauf', orderTypeBadgeDelivery: 'Lieferung',
@@ -65,16 +69,11 @@ const tr = {
     laterTitle: 'Später', laterSub: 'Lieferung für später einplanen',
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
     when: 'Wann', asap: 'Sofort', express: 'Express',
-    expressLabel: 'Express', expressSub: '~30 Min.', expressNote: '+€10,00 Expressaufschlag',
-    slotToday: 'Heute', slotTomorrow: 'Morgen',
-    slotSelect: 'Zeitfenster wählen',
-    slotNoSlots: 'Heute keine Slots mehr verfügbar — bitte Morgen wählen.',
-    priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceDiscount: 'Rabatt',
-    priceExpress: 'Expressaufschlag', priceTotal: 'Gesamt',
-    priceStores: 'Läden', priceItems: 'Artikel',
+    priceRound: 'Einkaufsrunde', priceUrgent: 'Dringende Lieferung', priceTotal: 'Gesamt',
+    priceStores: 'Weitere Läden', priceLarge: 'Großes Paket',
     confirmTitle: 'Bestellung aufgegeben!', confirmSub: 'Dein Kurier wurde benachrichtigt.',
-    confirmOrderNum: 'Bestellnummer', confirmEta: 'Geschätzte Lieferzeit',
-    confirmEtaExpress: '~30 Min.', confirmEtaStandard: '~25 Min.',
+    confirmOrderNum: 'Bestellnummer', confirmEta: 'Lieferung',
+    confirmEtaUrgent: 'ca. 45 Min.',
     confirmTrack: 'Bestellung verfolgen', confirmHome: 'Zurück zur Startseite',
   },
   en: {
@@ -82,7 +81,7 @@ const tr = {
     typeTitle: 'What would you like?', typeSub: 'Choose the type of order.',
     shoppingTitle: 'Shopping + Delivery', shoppingDesc: 'Courier shops for you and delivers to your door',
     deliveryTitle: 'Delivery only', deliveryDesc: 'Courier picks up your package and delivers it',
-    shoppingFrom: 'from €5.00', deliveryFrom: 'from €5.00',
+    shoppingFrom: 'from €8.50', deliveryFrom: 'from €8.50',
     // steps 1–2
     s1TitleShopping: 'Store / Pickup', s1SubShopping: 'Which store should the courier go to?',
     s1TitleDelivery: 'Pickup', s1SubDelivery: 'Where should your item be picked up from?',
@@ -90,7 +89,7 @@ const tr = {
     // step 3 shopping
     s3TitleShopping: 'Shopping order', s3SubShopping: 'What should be bought and where?',
     shoppingListLabel: 'Shopping list', shoppingListPh: 'e.g. Milk 1L, Bread, 6 Eggs…',
-    storesLabel: 'Number of stores', store1: 'store', store2: 'stores', store3: 'stores',
+    storesLabel: 'Number of stores (+€2 per extra store)', store1: 'store', store2: 'stores', store3: 'stores',
     itemsLabel: 'Number of items', itemsFew: 'few', itemsMed: 'moderate', itemsMany: 'many',
     // step 3 delivery
     s3TitleDelivery: 'What are we delivering?', s3SubDelivery: 'Describe your package for the courier.',
@@ -99,9 +98,13 @@ const tr = {
     sizeLabel: 'Package size',
     sSmallTitle: 'Small', sSmallSub: 'Envelope, documents',
     sMediumTitle: 'Medium', sMediumSub: 'Books, bag',
-    sLargeTitle: 'Large', sLargeSub: 'Box, multiple items',
+    sLargeTitle: 'Large', sLargeSub: 'Box, multiple items · +€1.50',
     // step 4
-    s4Title: 'When?', s4Sub: 'Should delivery happen now or later?',
+    s4Title: 'When?', s4Sub: 'Choose a shopping round or an urgent delivery.',
+    roundsTitle: 'Shopping rounds', roundsSub: 'One courier handles several orders in one round. That keeps it cheap.',
+    roundCutoff: 'Order by', noRounds: 'No round can be booked right now.',
+    urgentLabel: 'Urgent', urgentSub: 'Dedicated trip, about 45 min',
+    outsideArea: 'Bringo currently delivers in Pfarrkirchen (84347) only.',
     // step 5
     s5Title: 'Review order', s5Sub: 'Everything look right?',
     orderTypeBadgeShopping: 'Shopping', orderTypeBadgeDelivery: 'Delivery',
@@ -119,16 +122,11 @@ const tr = {
     laterTitle: 'Later', laterSub: 'Schedule delivery for later',
     dateLabel: 'Date', timeLabel: 'Time',
     when: 'When', asap: 'ASAP', express: 'Express',
-    expressLabel: 'Express', expressSub: '~30 min', expressNote: '+€10.00 express fee',
-    slotToday: 'Today', slotTomorrow: 'Tomorrow',
-    slotSelect: 'Choose time slot',
-    slotNoSlots: 'No more slots available today — please choose Tomorrow.',
-    priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceDiscount: 'Discount',
-    priceExpress: 'Express fee', priceTotal: 'Total',
-    priceStores: 'Stores', priceItems: 'Items',
+    priceRound: 'Shopping round', priceUrgent: 'Urgent delivery', priceTotal: 'Total',
+    priceStores: 'Extra stores', priceLarge: 'Large package',
     confirmTitle: 'Order placed!', confirmSub: 'Your courier has been notified.',
-    confirmOrderNum: 'Order number', confirmEta: 'Estimated delivery time',
-    confirmEtaExpress: '~30 min', confirmEtaStandard: '~25 min',
+    confirmOrderNum: 'Order number', confirmEta: 'Delivery',
+    confirmEtaUrgent: 'about 45 min',
     confirmTrack: 'Track order', confirmHome: 'Back to home',
   },
 }
@@ -278,6 +276,15 @@ function AddressField({
   )
 }
 
+function formatRoundDay(iso: string, lang: string): string {
+  return new Date(iso + 'T12:00:00').toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+function formatCutoff(d: Date, lang: string): string {
+  const day = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
+  return `${day} ${String(d.getHours()).padStart(2, '0')}:00`
+}
+
 export default function CreateDeliveryPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -285,7 +292,8 @@ export default function CreateDeliveryPage() {
   const t = tr[lang]
 
   const state = (location.state as {
-    prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' }
+    prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L'; slotId?: string }
+    slotId?: string
     orderType?: 'shopping' | 'delivery'
     fromAI?: boolean
   } | null)
@@ -306,12 +314,12 @@ export default function CreateDeliveryPage() {
   const [dropoffCoords, setDropoffCoords] = useState<Coords | null>(null)
   const [size, setSize] = useState<'S' | 'M' | 'L'>(prefill?.size ?? 'M')
   const [stores, setStores] = useState<1 | 2 | 3>(1)
-  const itemRange: ItemRange = '1-5'
   const [note, setNote] = useState('')
-  const [scheduleType, setScheduleType] = useState<'now' | 'later' | 'express'>('later')
-  const [calendarDay, setCalendarDay] = useState<string>(() => new Date().toISOString().split('T')[0])
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(
-    (state as { slotId?: string } | null)?.slotId ?? null
+  const prefillSlot = prefill?.slotId ?? state?.slotId
+  const [rounds] = useState<UpcomingRound[]>(() => getUpcomingRounds())
+  const [schedule, setSchedule] = useState<Schedule>(prefillSlot === 'urgent' ? 'urgent' : 'round')
+  const [selectedRound, setSelectedRound] = useState<string | null>(
+    () => (rounds.find(r => r.id === prefillSlot) ?? rounds[0])?.dateIso ?? null
   )
   const [orderId, setOrderId] = useState('')
   const [pickupHouseNum, setPickupHouseNum] = useState('')
@@ -332,7 +340,7 @@ export default function CreateDeliveryPage() {
     pickupTimer.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(pickup)}&limit=6&bbox=12.6,48.2,13.2,48.6&lang=${lang}`,
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(pickup)}&limit=6&bbox=12.88,48.40,13.00,48.46&lang=${lang}`,
         )
         const data = await r.json()
         setPickupSugs((data.features ?? []).map(photonToNomResult).filter((x: NomResult | null): x is NomResult => x !== null))
@@ -346,7 +354,7 @@ export default function CreateDeliveryPage() {
     dropoffTimer.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(dropoff)}&limit=6&bbox=12.6,48.2,13.2,48.6&lang=${lang}`,
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(dropoff)}&limit=6&bbox=12.88,48.40,13.00,48.46&lang=${lang}`,
         )
         const data = await r.json()
         setDropoffSugs((data.features ?? []).map(photonToNomResult).filter((x: NomResult | null): x is NomResult => x !== null))
@@ -368,27 +376,34 @@ export default function CreateDeliveryPage() {
     else if (step === 2) selectDropoff(address, { lat, lon }, hasHouseNum, postcode)
   }
 
+  const pickupInArea = isInServiceArea(detectPostcode(pickup))
+  const dropoffInArea = isInServiceArea(dropoffPostcode ?? detectPostcode(dropoff))
+  const round = rounds.find(r => r.dateIso === selectedRound) ?? null
+  const price = calculatePrice({ schedule, orderType: orderType ?? 'delivery', size, stores })
+  const whenLabel = schedule === 'urgent'
+    ? `${t.urgentLabel} · ${t.urgentSub}`
+    : round ? `${formatRoundDay(round.dateIso, lang)} · ${round.label}` : '—'
+
   const canContinue =
     step === 0 ? orderType !== null
-    : step === 1 ? (pickupCoords ? (pickupHasHouseNum || pickupHouseNum.trim().length > 0) : pickup.trim().length > 2)
-    : step === 2 ? (dropoffCoords ? (dropoffHasHouseNum || dropoffHouseNum.trim().length > 0) : dropoff.trim().length > 2)
+    : step === 1 ? pickupInArea !== false && (pickupCoords ? (pickupHasHouseNum || pickupHouseNum.trim().length > 0) : pickup.trim().length > 2)
+    : step === 2 ? dropoffInArea !== false && (dropoffCoords ? (dropoffHasHouseNum || dropoffHouseNum.trim().length > 0) : dropoff.trim().length > 2)
     : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : true)
-    : step === 4 ? scheduleType === 'express' || selectedSlotId !== null
-    : step === 5 ? pickup.trim().length > 0 && dropoff.trim().length > 0
+    : step === 4 ? schedule === 'urgent' || round !== null
+    : step === 5 ? pickup.trim().length > 0 && dropoff.trim().length > 0 && (schedule === 'urgent' || round !== null)
     : true
 
   const goNext = () => {
     if (step < 5) { setStep(s => s + 1); return }
     const fullPickup = pickup + (pickupHouseNum ? `, ${pickupHouseNum}` : '')
     const fullDropoff = dropoff + (dropoffHouseNum ? `, ${dropoffHouseNum}` : '')
-    const selectedSlot = selectedSlotId ? getSlotById(selectedSlotId) : null
-    const price = calculatePrice(fullPickup, fullDropoff, size, scheduleType, '', stores, itemRange, selectedSlot?.priceMod ?? null).total
     const id = `BRG-${Date.now().toString().slice(-6)}`
     setActiveOrder({
       id, pickup: fullPickup, dropoff: fullDropoff,
       description: orderType === 'shopping' ? shoppingList : (itemDesc || 'Paket'),
-      size, price, note, status: 'searching',
-      scheduleType: scheduleType === 'express' ? 'now' : scheduleType as 'now' | 'later',
+      size, price: price.total, note, status: 'searching',
+      scheduleType: schedule === 'urgent' ? 'now' : 'later',
+      ...(schedule === 'round' && round ? { scheduleDate: round.dateIso, scheduleTime: round.label } : {}),
     })
     setOrderId(id)
     setStep(6)
@@ -430,7 +445,7 @@ export default function CreateDeliveryPage() {
           </div>
           <div className="w-full bg-green-50 rounded-2xl p-4 flex justify-between items-center">
             <span className="text-sm text-green-700">{t.confirmEta}</span>
-            <span className="font-bold text-green-700">{scheduleType === 'express' ? t.confirmEtaExpress : t.confirmEtaStandard}</span>
+            <span className="font-bold text-green-700 text-right">{schedule === 'urgent' ? t.confirmEtaUrgent : whenLabel}</span>
           </div>
           <button onClick={() => navigate('/active-order')} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-base">
             {t.confirmTrack}
@@ -585,6 +600,9 @@ export default function CreateDeliveryPage() {
                     coordsSet={!!pickupCoords}
                     orChoose={t.orChoose}
                   />
+                  {pickupInArea === false && (
+                    <p className="mt-4 text-sm font-semibold px-3 py-2 rounded-xl" style={{ background: '#fef2f2', color: '#b91c1c' }}>{t.outsideArea}</p>
+                  )}
                   {pickupCoords && !pickupHasHouseNum && (
                     <div className="mt-4">
                       <label className="block text-xs font-semibold text-gray-500 mb-1.5" htmlFor="pickup-housenum">
@@ -620,6 +638,9 @@ export default function CreateDeliveryPage() {
                     coordsSet={!!dropoffCoords}
                     orChoose={t.orChoose}
                   />
+                  {dropoffInArea === false && (
+                    <p className="mt-4 text-sm font-semibold px-3 py-2 rounded-xl" style={{ background: '#fef2f2', color: '#b91c1c' }}>{t.outsideArea}</p>
+                  )}
                   {dropoffCoords && !dropoffHasHouseNum && (
                     <div className="mt-4">
                       <label className="block text-xs font-semibold text-gray-500 mb-1.5" htmlFor="dropoff-housenum">
@@ -761,159 +782,55 @@ export default function CreateDeliveryPage() {
           </div>
         )}
 
-        {step === 4 && (() => {
-          const effectivePostcode = dropoffPostcode ?? detectPostcode(dropoff)
-          const allowedDays = getAllowedDays(effectivePostcode)
-          const zoneName = getZoneName(effectivePostcode)
-          const dayOptions = [
-            ...(effectivePostcode === '84347' ? [{ key: 'express', label: t.expressLabel, sub: t.expressSub, iso: null }] : []),
-            ...Array.from({ length: 7 }, (_, i) => {
-              const d = new Date(Date.now() + i * 86400000)
-              const iso = d.toISOString().split('T')[0]
-              if (allowedDays && !allowedDays.includes(d.getDay())) return null
-              const label = i === 0
-                ? t.slotToday
-                : i === 1
-                ? t.slotTomorrow
-                : d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
-              const sub = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' })
-              return { key: iso, label, sub, iso }
-            }).filter((d): d is NonNullable<typeof d> => d !== null),
-          ]
-          const slots = scheduleType !== 'express' ? getTimeSlots(calendarDay) : []
+        {step === 4 && (
+          <div className="animate-fade-in-up">
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(4)}</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
+            <p className="text-gray-400 text-sm mb-5">{t.s4Sub}</p>
 
-          return (
-            <div className="animate-fade-in-up">
-              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(4)}</p>
-              <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
-              <p className="text-gray-400 text-sm mb-5">{t.s4Sub}</p>
-              {zoneName && (
-                <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
-                  <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                  </svg>
-                  <p className="text-xs font-semibold text-blue-600">{zoneName}</p>
-                </div>
-              )}
-
-              {/* Horizontal day picker */}
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-                {dayOptions.map(day => {
-                  const isExpress = day.key === 'express'
-                  const sel = isExpress ? scheduleType === 'express' : calendarDay === day.key && scheduleType !== 'express'
-                  return (
-                    <button key={day.key}
-                      onClick={() => {
-                        if (isExpress) {
-                          setScheduleType('express')
-                          setCalendarDay('express')
-                          setSelectedSlotId(null)
-                        } else {
-                          setCalendarDay(day.key)
-                          setScheduleType('later')
-                          setSelectedSlotId(null)
-                        }
-                      }}
-                      className="shrink-0 flex flex-col items-center px-3.5 py-3 rounded-2xl border-2 transition-all min-w-[68px]"
-                      style={{
-                        borderColor: sel ? '#16a34a' : '#e5e7eb',
-                        background: sel && isExpress
-                          ? 'linear-gradient(135deg, #92400e, #d97706)'
-                          : sel ? '#f0fdf4' : 'white',
-                      }}>
-                      {isExpress ? (
-                        <>
-                          <svg viewBox="0 0 20 20" fill={sel ? '#fde68a' : '#d97706'} width="16" height="16" className="mb-1">
-                            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
-                          </svg>
-                          <span className="text-xs font-black" style={{ color: sel ? '#fde68a' : '#92400e' }}>
-                            {day.label}
-                          </span>
-                          <span className="text-xs font-medium mt-0.5" style={{ color: sel ? 'rgba(255,255,255,0.65)' : '#9ca3af' }}>
-                            {day.sub}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-xs font-semibold mb-0.5" style={{ color: sel ? '#15803d' : '#6b7280' }}>
-                            {day.label}
-                          </span>
-                          <span className="text-base font-black" style={{ color: sel ? '#15803d' : '#111827' }}>
-                            {new Date(day.iso + 'T12:00:00').getDate()}
-                          </span>
-                          <span className="text-xs" style={{ color: sel ? '#16a34a' : '#9ca3af' }}>
-                            {new Date(day.iso + 'T12:00:00').toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { month: 'short' })}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Express note */}
-              {scheduleType === 'express' && (
-                <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl"
-                  style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-                  <svg viewBox="0 0 20 20" fill="#d97706" width="14" height="14" className="shrink-0">
-                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
-                  </svg>
-                  <p className="text-xs font-semibold" style={{ color: '#92400e' }}>{t.expressNote}</p>
-                </div>
-              )}
-
-              {/* Slot grid */}
-              {scheduleType !== 'express' && (
-                <div className="mt-5 space-y-2">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">{t.slotSelect}</p>
-                  {slots.length === 0
-                    ? <p className="text-sm text-gray-400 italic">{t.slotNoSlots}</p>
-                    : slots.map((slot: TimeSlot) => {
-                        const sel = selectedSlotId === slot.id
-                        return (
-                          <button key={slot.id}
-                            onClick={() => setSelectedSlotId(slot.id)}
-                            className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all"
-                            style={{
-                              borderColor: sel ? '#16a34a' : '#e5e7eb',
-                              background: sel ? '#f0fdf4' : 'white',
-                            }}>
-                            <span className="text-sm font-bold tabular-nums" style={{ color: sel ? '#15803d' : '#111827' }}>
-                              {slot.label}
-                            </span>
-                            {slot.tag === 'surcharge' && (
-                              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
-                                style={{ background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>
-                                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
-                                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
-                                </svg>
-                                {slot.tagLabel}
-                              </span>
-                            )}
-                            {slot.tag === 'discount' && (
-                              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
-                                style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>
-                                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
-                                  <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm4.707 3.707a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L8.414 10l1.293-1.293zM11 6a1 1 0 011 1v6a1 1 0 11-2 0V7a1 1 0 011-1zm2.293 7.293a1 1 0 001.414-1.414L13.414 10l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3z" clipRule="evenodd"/>
-                                </svg>
-                                {slot.tagLabel}
-                              </span>
-                            )}
-                            {slot.tag === 'normal' && sel && (
-                              <svg viewBox="0 0 20 20" fill="#16a34a" width="18" height="18">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                              </svg>
-                            )}
-                          </button>
-                        )
-                      })
-                  }
-                </div>
-              )}
+            <p className="text-sm font-semibold text-gray-700 mb-1">{t.roundsTitle}</p>
+            <p className="text-xs text-gray-400 mb-3">{t.roundsSub}</p>
+            <div className="space-y-2">
+              {rounds.length === 0 && <p className="text-sm text-gray-400 italic">{t.noRounds}</p>}
+              {rounds.map(r => {
+                const sel = schedule === 'round' && selectedRound === r.dateIso
+                const roundPrice = calculatePrice({ schedule: 'round', orderType: orderType ?? 'delivery', size, stores }).total
+                return (
+                  <button key={r.dateIso}
+                    onClick={() => { setSchedule('round'); setSelectedRound(r.dateIso) }}
+                    className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all text-left"
+                    style={{ borderColor: sel ? '#16a34a' : '#e5e7eb', background: sel ? '#f0fdf4' : 'white' }}>
+                    <span>
+                      <span className="block text-sm font-bold" style={{ color: sel ? '#15803d' : '#111827' }}>
+                        {formatRoundDay(r.dateIso, lang)} · <span className="tabular-nums">{r.label}</span>
+                      </span>
+                      <span className="block text-xs text-gray-400 mt-0.5">{t.roundCutoff}: {formatCutoff(r.cutoff, lang)}</span>
+                    </span>
+                    <span className="text-sm font-black shrink-0 ml-3" style={{ color: sel ? '#15803d' : '#111827' }}>€{roundPrice.toFixed(2)}</span>
+                  </button>
+                )
+              })}
             </div>
-          )
-        })()}
+
+            <button
+              onClick={() => setSchedule('urgent')}
+              className="mt-4 w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all text-left"
+              style={{ borderColor: schedule === 'urgent' ? '#d97706' : '#e5e7eb', background: schedule === 'urgent' ? '#fffbeb' : 'white' }}>
+              <span className="flex items-center gap-2">
+                <svg viewBox="0 0 20 20" fill="#d97706" width="16" height="16" className="shrink-0">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                </svg>
+                <span>
+                  <span className="block text-sm font-bold" style={{ color: '#92400e' }}>{t.urgentLabel}</span>
+                  <span className="block text-xs text-gray-400 mt-0.5">{t.urgentSub}</span>
+                </span>
+              </span>
+              <span className="text-sm font-black shrink-0 ml-3" style={{ color: '#92400e' }}>
+                €{calculatePrice({ schedule: 'urgent', orderType: orderType ?? 'delivery', size, stores }).total.toFixed(2)}
+              </span>
+            </button>
+          </div>
+        )}
 
         {step === 5 && (
           <div className="animate-fade-in-up">
@@ -961,104 +878,47 @@ export default function CreateDeliveryPage() {
                 </span>
               </div>
             </div>
-            {(() => {
-              const selectedSlot = selectedSlotId ? getSlotById(selectedSlotId) : undefined
-              const fullPickup = pickup + (pickupHouseNum ? `, ${pickupHouseNum}` : '')
-              const fullDropoff = dropoff + (dropoffHouseNum ? `, ${dropoffHouseNum}` : '')
-              const p = calculatePrice(
-                fullPickup, fullDropoff, size,
-                scheduleType === 'express' ? 'express' : scheduleType,
-                '',
-                orderType === 'shopping' ? stores : 1,
-                orderType === 'shopping' ? itemRange : '1-5',
-                scheduleType === 'express' ? null : (selectedSlot?.priceMod ?? null),
-              )
-              const todayIso = new Date().toISOString().split('T')[0]
-              const tomorrowIso = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-              const whenLabel = scheduleType === 'express'
-                ? `${t.expressLabel} · ${t.expressSub}`
-                : (() => {
-                    const slot = selectedSlot
-                    const dayLabel = calendarDay === todayIso
-                      ? t.slotToday
-                      : calendarDay === tomorrowIso
-                      ? t.slotTomorrow
-                      : calendarDay !== 'express'
-                      ? new Date(calendarDay + 'T12:00:00').toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-                      : ''
-                    return slot ? `${dayLabel} · ${slot.label}` : '—'
-                  })()
-              return (
-                <div className="bg-white rounded-2xl border border-green-100 mb-3 overflow-hidden"
-                  style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}>
-                  <div className="px-5 py-4 space-y-2">
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>{t.priceBase} ({size === 'S' ? t.smallLabel : size === 'M' ? t.mediumLabel : t.largeLabel})</span>
-                      <span>€{p.base.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>{t.priceDist} (~{p.estimatedKm} km)</span>
-                      <span>+ €{p.distanceSurcharge.toFixed(2)}</span>
-                    </div>
-                    {p.storesSurcharge > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
-                        <span>{t.priceStores} ({stores === 3 ? '3+' : stores})</span>
-                        <span>+ €{p.storesSurcharge.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {p.itemsSurcharge > 0 && (
-                      <div className="flex justify-between text-sm text-gray-500">
-                        <span>{t.priceItems} ({itemRange})</span>
-                        <span>+ €{p.itemsSurcharge.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {p.expressSurcharge > 0 && (
-                      <div className="flex justify-between text-sm font-semibold" style={{ color: '#d97706' }}>
-                        <span className="flex items-center gap-1">
-                          <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
-                            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
-                          </svg>
-                          {t.priceExpress}
-                        </span>
-                        <span>+ €{p.expressSurcharge.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {p.peakSurcharge > 0 && (
-                      <div className="flex justify-between text-sm text-amber-600">
-                        <span>{t.pricePeak}</span>
-                        <span>+ €{p.peakSurcharge.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {p.peakSurcharge < 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>{t.priceDiscount}</span>
-                        <span>− €{Math.abs(p.peakSurcharge).toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                      <span className="text-sm font-semibold text-gray-700">{t.priceTotal}</span>
-                      <span className="text-3xl font-black text-gray-900">€{p.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-t border-gray-100">
-                    <svg viewBox="0 0 20 20" fill={scheduleType === 'express' ? '#d97706' : '#6b7280'} width="16" height="16" className="shrink-0">
-                      {scheduleType === 'express'
-                        ? <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
-                        : <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
-                      }
-                    </svg>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}:</p>
-                    <p className="text-sm font-bold text-gray-900 flex-1">{whenLabel}</p>
-                    <button
-                      onClick={() => setStep(4)}
-                      className="text-xs font-semibold px-2 py-0.5 rounded-lg transition-colors shrink-0"
-                      style={{ background: '#f0fdf4', color: '#15803d' }}>
-                      {lang === 'de' ? 'Ändern' : 'Edit'}
-                    </button>
-                  </div>
+            <div className="bg-white rounded-2xl border border-green-100 mb-3 overflow-hidden"
+              style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}>
+              <div className="px-5 py-4 space-y-2">
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>{schedule === 'urgent' ? t.priceUrgent : t.priceRound}</span>
+                  <span>€{price.base.toFixed(2)}</span>
                 </div>
-              )
-            })()}
+                {price.storesSurcharge > 0 && (
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>{t.priceStores} ({stores - 1})</span>
+                    <span>+ €{price.storesSurcharge.toFixed(2)}</span>
+                  </div>
+                )}
+                {price.largeSurcharge > 0 && (
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>{t.priceLarge}</span>
+                    <span>+ €{price.largeSurcharge.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                  <span className="text-sm font-semibold text-gray-700">{t.priceTotal}</span>
+                  <span className="text-3xl font-black text-gray-900">€{price.total.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-t border-gray-100">
+                <svg viewBox="0 0 20 20" fill={schedule === 'urgent' ? '#d97706' : '#6b7280'} width="16" height="16" className="shrink-0">
+                  {schedule === 'urgent'
+                    ? <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                    : <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                  }
+                </svg>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}:</p>
+                <p className="text-sm font-bold text-gray-900 flex-1">{whenLabel}</p>
+                <button
+                  onClick={() => setStep(4)}
+                  className="text-xs font-semibold px-2 py-0.5 rounded-lg transition-colors shrink-0"
+                  style={{ background: '#f0fdf4', color: '#15803d' }}>
+                  {lang === 'de' ? 'Ändern' : 'Edit'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

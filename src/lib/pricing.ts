@@ -1,56 +1,100 @@
-export interface PriceBreakdown {
-  base: number
-  distanceSurcharge: number
-  peakSurcharge: number
-  storesSurcharge: number
-  itemsSurcharge: number
-  expressSurcharge: number
-  total: number
-  estimatedKm: number
-  isPeak: boolean
-  isExpress: boolean
-}
+// Bringo pricing — shared shopping rounds in Pfarrkirchen.
+//
+// One courier serves 3–4 customers per round, so the courier cost per order
+// is ~€7 instead of ~€14 for a dedicated trip. Urgent orders get a dedicated
+// trip and are priced to cover it.
 
-export const EXPRESS_SURCHARGE = 10.00
+export const ROUND_PRICE = 8.50      // per order in a shared shopping round
+export const URGENT_PRICE = 15.00    // dedicated trip, within ~45 min
+export const EXTRA_STORE_FEE = 2.00  // per additional store (shopping only)
+export const LARGE_ITEM_FEE = 1.50   // large / heavy item (delivery only)
+export const MAX_STORES = 3
 
-export type ItemRange = '1-5' | '6-15' | '16+'
+// Membership (shown as info; billed outside the app for now)
+export const MEMBERSHIP_MONTHLY = { regular: 5.00, reduced: 3.00 }
 
-export interface TimeSlot {
-  id: string
-  start: number       // 24h hour
+export type Schedule = 'round' | 'urgent'
+export type OrderType = 'shopping' | 'delivery'
+export type RoundId = 'tue' | 'fri'
+
+export interface ShoppingRound {
+  id: RoundId
+  weekday: number   // 0 = Sunday … 6 = Saturday
+  start: number     // 24h hour
   end: number
-  label: string       // "14:00 – 16:00"
-  priceMod: number    // fraction: -0.10 = −10%, +0.15 = +15%
-  tag: 'discount' | 'surcharge' | 'normal'
-  tagLabel: string    // "−10 %", "+15 %", ""
 }
 
-const BASE_SLOTS: TimeSlot[] = [
-  { id: 's0810', start: 8,  end: 10, label: '08:00 – 10:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
-  { id: 's1012', start: 10, end: 12, label: '10:00 – 12:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
-  { id: 's1214', start: 12, end: 14, label: '12:00 – 14:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
-  { id: 's1416', start: 14, end: 16, label: '14:00 – 16:00', priceMod: -0.10, tag: 'discount',  tagLabel: '−10 %' },
-  { id: 's1618', start: 16, end: 18, label: '16:00 – 18:00', priceMod: -0.05, tag: 'discount',  tagLabel: '−5 %' },
-  { id: 's1820', start: 18, end: 20, label: '18:00 – 20:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
-  { id: 's2022', start: 20, end: 22, label: '20:00 – 22:00', priceMod: 0.15,  tag: 'surcharge', tagLabel: '+15 %' },
+export const ROUNDS: ShoppingRound[] = [
+  { id: 'tue', weekday: 2, start: 9, end: 12 },
+  { id: 'fri', weekday: 5, start: 9, end: 12 },
 ]
 
-export function getTimeSlots(dateIso: string): TimeSlot[] {
-  const todayIso = new Date().toISOString().split('T')[0]
-  if (dateIso === todayIso) {
-    const nowHour = new Date().getHours()
-    return BASE_SLOTS.filter(s => s.start > nowHour)
+// Orders for a round close the evening before at this hour.
+export const ORDER_CUTOFF_HOUR = 20
+
+export interface UpcomingRound {
+  id: RoundId
+  dateIso: string   // local date, YYYY-MM-DD
+  start: number
+  end: number
+  label: string     // "09:00 – 12:00"
+  cutoff: Date
+}
+
+const pad = (n: number) => String(n).padStart(2, '0')
+
+/** Local calendar date as YYYY-MM-DD (toISOString would use UTC). */
+export function localIso(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+export function roundLabel(r: { start: number; end: number }): string {
+  return `${pad(r.start)}:00 – ${pad(r.end)}:00`
+}
+
+/** The next `count` rounds that can still be booked at `now`. */
+export function getUpcomingRounds(now: Date = new Date(), count = 4): UpcomingRound[] {
+  const result: UpcomingRound[] = []
+  for (let i = 0; i < 28 && result.length < count; i++) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)
+    const round = ROUNDS.find(r => r.weekday === day.getDay())
+    if (!round) continue
+    const cutoff = new Date(day.getFullYear(), day.getMonth(), day.getDate() - 1, ORDER_CUTOFF_HOUR)
+    if (now >= cutoff) continue
+    result.push({ id: round.id, dateIso: localIso(day), start: round.start, end: round.end, label: roundLabel(round), cutoff })
   }
-  return BASE_SLOTS
+  return result
 }
 
-export function getSlotById(id: string): TimeSlot | undefined {
-  return BASE_SLOTS.find(s => s.id === id)
+export interface PriceBreakdown {
+  base: number
+  storesSurcharge: number
+  largeSurcharge: number
+  total: number
+  isUrgent: boolean
 }
 
-const BASE_PRICES: Record<'S' | 'M' | 'L', number> = { S: 5.00, M: 6.00, L: 7.50 }
+export function calculatePrice(opts: {
+  schedule: Schedule
+  orderType: OrderType
+  size?: 'S' | 'M' | 'L'
+  stores?: number
+}): PriceBreakdown {
+  const isUrgent = opts.schedule === 'urgent'
+  const base = isUrgent ? URGENT_PRICE : ROUND_PRICE
+  const stores = Math.min(Math.max(opts.stores ?? 1, 1), MAX_STORES)
+  const storesSurcharge = opts.orderType === 'shopping' ? (stores - 1) * EXTRA_STORE_FEE : 0
+  const largeSurcharge = opts.orderType === 'delivery' && opts.size === 'L' ? LARGE_ITEM_FEE : 0
+  return {
+    base,
+    storesSurcharge,
+    largeSurcharge,
+    total: Math.round((base + storesSurcharge + largeSurcharge) * 100) / 100,
+    isUrgent,
+  }
+}
 
-// Approximate GPS coords for preset Pfarrkirchen addresses
+// Approximate GPS coords for preset Pfarrkirchen addresses (used for courier ETA)
 const COORDS: Record<string, [number, number]> = {
   'CAMPUS Pfarrkirchen, Petersbogen 1':    [48.4247, 12.9398],
   'Bahnhof Pfarrkirchen, Bahnhofstr. 1':   [48.4320, 12.9307],
@@ -76,7 +120,7 @@ function pseudoKm(a: string, b: string): number {
   const str = a + b
   let hash = 0
   for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) & 0xffffff
-  return 0.5 + (hash % 35) / 10 // 0.5–4.0 km
+  return 0.5 + (hash % 25) / 10 // 0.5–2.9 km (Pfarrkirchen is small)
 }
 
 export function estimateKm(pickup: string, dropoff: string): number {
@@ -84,68 +128,4 @@ export function estimateKm(pickup: string, dropoff: string): number {
   const c2 = COORDS[dropoff]
   if (c1 && c2) return haversineKm(c1[0], c1[1], c2[0], c2[1])
   return pseudoKm(pickup, dropoff)
-}
-
-function distanceSurcharge(km: number): number {
-  if (km < 1) return 0
-  if (km < 2) return 0.50
-  if (km < 3) return 1.00
-  if (km < 5) return 1.50
-  return 2.00
-}
-
-function isPeakHour(hour: number): boolean {
-  return (hour >= 12 && hour < 14) || (hour >= 17 && hour < 20)
-}
-
-const STORES_SURCHARGE: Record<1 | 2 | 3, number> = { 1: 0, 2: 2.00, 3: 4.00 }
-const ITEMS_SURCHARGE: Record<ItemRange, number> = { '1-5': 0, '6-15': 1.00, '16+': 2.50 }
-
-export function calculatePrice(
-  pickup: string,
-  dropoff: string,
-  size: 'S' | 'M' | 'L',
-  scheduleType: 'now' | 'later' | 'express',
-  scheduleTime: string,
-  stores: 1 | 2 | 3 = 1,
-  itemRange: ItemRange = '1-5',
-  slotPriceMod: number | null = null,
-): PriceBreakdown {
-  const km = estimateKm(pickup, dropoff)
-  const base = BASE_PRICES[size]
-  const distSurcharge = distanceSurcharge(km)
-  const storesSurcharge = STORES_SURCHARGE[stores]
-  const itemsSurcharge = ITEMS_SURCHARGE[itemRange]
-  const isExpress = scheduleType === 'express'
-  const expressSurcharge = isExpress ? EXPRESS_SURCHARGE : 0
-
-  let peakSurcharge: number
-  let isPeak: boolean
-
-  if (isExpress) {
-    peakSurcharge = 0
-    isPeak = false
-  } else if (slotPriceMod !== null) {
-    peakSurcharge = Math.round(base * slotPriceMod * 100) / 100
-    isPeak = slotPriceMod > 0
-  } else {
-    const hour = scheduleType === 'later' && scheduleTime
-      ? parseInt(scheduleTime.split(':')[0], 10)
-      : new Date().getHours()
-    isPeak = isPeakHour(hour)
-    peakSurcharge = isPeak ? 0.50 : 0
-  }
-
-  return {
-    base,
-    distanceSurcharge: distSurcharge,
-    storesSurcharge,
-    itemsSurcharge,
-    peakSurcharge,
-    expressSurcharge,
-    total: Math.round((base + distSurcharge + storesSurcharge + itemsSurcharge + peakSurcharge + expressSurcharge) * 100) / 100,
-    estimatedKm: Math.round(km * 10) / 10,
-    isPeak,
-    isExpress,
-  }
 }
