@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { SERVICE_BOUNDS } from '../lib/zones'
+import { STORES, CATEGORY_ICON, type Store } from '../lib/stores'
 
 const AREA = L.latLngBounds(
   [SERVICE_BOUNDS.south, SERVICE_BOUNDS.west],
@@ -20,6 +21,20 @@ interface Props {
   pickupAddress?: string
   dropoffAddress?: string
   lang: 'de' | 'en'
+  showStores?: boolean
+  onStoreSelect?: (store: Store) => void
+}
+
+// Store names only show when zoomed in; further out each store is a small icon.
+const STORE_LABEL_ZOOM = 15
+
+function storeIcon(s: Store) {
+  return L.divIcon({
+    className: 'store-badge',
+    html: `<div class="store-pill" style="background:${s.bg};color:${s.fg}"><span class="store-ico">${CATEGORY_ICON[s.category]}</span><span class="store-label">${s.label}</span></div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  })
 }
 
 function pinIcon(color: string, letter: string) {
@@ -54,7 +69,7 @@ function haversineKm(a: Coords, b: Coords) {
 
 export default function DeliveryMap({
   pickupCoords, dropoffCoords, activePin, onMapClick,
-  pickupAddress, dropoffAddress, lang,
+  pickupAddress, dropoffAddress, lang, showStores = false, onStoreSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
@@ -64,6 +79,9 @@ export default function DeliveryMap({
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null)
   const onMapClickRef = useRef(onMapClick)
   useEffect(() => { onMapClickRef.current = onMapClick }, [onMapClick])
+  const onStoreSelectRef = useRef(onStoreSelect)
+  useEffect(() => { onStoreSelectRef.current = onStoreSelect }, [onStoreSelect])
+  const storeLayerRef = useRef<L.LayerGroup | null>(null)
 
   // Init map
   useEffect(() => {
@@ -94,6 +112,11 @@ export default function DeliveryMap({
     }
     lockZoom()
     map.on('resize', lockZoom)
+
+    const updateStoreLabels = () =>
+      containerRef.current?.classList.toggle('stores-compact', map.getZoom() < STORE_LABEL_ZOOM)
+    updateStoreLabels()
+    map.on('zoomend', updateStoreLabels)
     // Re-fit when the map container changes size (layout shifts, rotation)
     const observer = new ResizeObserver(() => map.invalidateSize())
     observer.observe(containerRef.current)
@@ -130,6 +153,21 @@ export default function DeliveryMap({
       mapRef.current = null
     }
   }, [])
+
+  // Store badges
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    storeLayerRef.current?.remove()
+    storeLayerRef.current = null
+    if (!showStores) return
+    const group = L.layerGroup(STORES.map(s =>
+      L.marker([s.lat, s.lon], { icon: storeIcon(s), title: s.name, alt: s.name, zIndexOffset: -100 })
+        .bindTooltip(s.name, { direction: 'top', offset: [0, -14] })
+        .on('click', () => onStoreSelectRef.current?.(s))
+    )).addTo(map)
+    storeLayerRef.current = group
+  }, [showStores])
 
   // Pickup marker
   useEffect(() => {

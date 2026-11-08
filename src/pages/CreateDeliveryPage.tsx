@@ -673,6 +673,8 @@ export default function CreateDeliveryPage() {
               pickupAddress={pickup}
               dropoffAddress={dropoff}
               lang={lang}
+              showStores={step === 1}
+              onStoreSelect={s => selectPickup(s.name, { lat: s.lat, lon: s.lon }, true)}
             />
           </div>
         </div>
