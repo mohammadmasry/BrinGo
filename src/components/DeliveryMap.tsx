@@ -72,8 +72,9 @@ export default function DeliveryMap({
     const map = L.map(containerRef.current, {
       center: [48.4358, 12.9445],
       zoom: 14,
-      minZoom: 13,
-      maxBounds: AREA.pad(0.15),
+      zoomSnap: 0.25,   // fine steps so the furthest zoom-out fits the area exactly
+      zoomDelta: 0.5,
+      maxBounds: AREA,
       maxBoundsViscosity: 1,
       zoomControl: false,
       attributionControl: false,
@@ -85,11 +86,17 @@ export default function DeliveryMap({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
-    // Grey out everything outside Pfarrkirchen and outline the service area
-    const outer: L.LatLngExpression[] = [[-85, -180], [85, -180], [85, 180], [-85, 180]]
-    const inner: L.LatLngExpression[] = [AREA.getSouthWest(), AREA.getNorthWest(), AREA.getNorthEast(), AREA.getSouthEast()]
-    L.polygon([outer, inner], { stroke: false, fillColor: '#0f172a', fillOpacity: 0.25, interactive: false }).addTo(map)
-    L.rectangle(AREA, { color: '#16a34a', weight: 2, dashArray: '6 6', fill: false, interactive: false }).addTo(map)
+    // Furthest zoom-out = Pfarrkirchen fills the map, so nothing outside is visible.
+    const lockZoom = () => {
+      const minZoom = map.getBoundsZoom(AREA, true)
+      map.setMinZoom(minZoom)
+      if (map.getZoom() < minZoom) map.setZoom(minZoom)
+    }
+    lockZoom()
+    map.on('resize', lockZoom)
+    // Re-fit when the map container changes size (layout shifts, rotation)
+    const observer = new ResizeObserver(() => map.invalidateSize())
+    observer.observe(containerRef.current)
 
     L.control.attribution({ position: 'bottomleft', prefix: false })
       .addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors')
@@ -118,6 +125,7 @@ export default function DeliveryMap({
     mapRef.current = map
 
     return () => {
+      observer.disconnect()
       map.remove()
       mapRef.current = null
     }

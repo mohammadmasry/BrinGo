@@ -51,7 +51,7 @@ const tr = {
     roundsTitle: 'Einkaufsrunden', roundsSub: 'Ein Kurier erledigt mehrere Aufträge in einer Runde. Deshalb ist es günstiger.',
     roundCutoff: 'Bestellschluss', noRounds: 'Gerade ist keine Runde buchbar.',
     urgentLabel: 'Dringend', urgentSub: 'Eigene Fahrt, ca. 45 Min.',
-    outsideArea: 'Bringo liefert derzeit nur in Pfarrkirchen (84347).',
+    outsideArea: 'Bringo liefert derzeit nur in Pfarrkirchen und Postmünster.',
     // step 5
     s5Title: 'Bestellung prüfen', s5Sub: 'Alles korrekt?',
     orderTypeBadgeShopping: 'Einkauf', orderTypeBadgeDelivery: 'Lieferung',
@@ -104,7 +104,7 @@ const tr = {
     roundsTitle: 'Shopping rounds', roundsSub: 'One courier handles several orders in one round. That keeps it cheap.',
     roundCutoff: 'Order by', noRounds: 'No round can be booked right now.',
     urgentLabel: 'Urgent', urgentSub: 'Dedicated trip, about 45 min',
-    outsideArea: 'Bringo currently delivers in Pfarrkirchen (84347) only.',
+    outsideArea: 'Bringo currently delivers in Pfarrkirchen and Postmünster only.',
     // step 5
     s5Title: 'Review order', s5Sub: 'Everything look right?',
     orderTypeBadgeShopping: 'Shopping', orderTypeBadgeDelivery: 'Delivery',

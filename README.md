@@ -1,6 +1,6 @@
 # Bringo
 
-Bringo is a student-run shopping and delivery service for Pfarrkirchen (84347). It is aimed mainly at older people and anyone without a car, and relatives can order for them. Verified university students do the shopping in shared **shopping rounds**: one courier shops for 3–4 customers in one trip, which keeps the price low. Urgent orders get their own trip.
+Bringo is a student-run shopping and delivery service for Pfarrkirchen and Postmünster. It is aimed mainly at older people and anyone without a car, and relatives can order for them. Verified university students do the shopping in shared **shopping rounds**: one courier shops for 3–4 customers in one trip, which keeps the price low. Urgent orders get their own trip.
 
 This repository holds the working prototype. It has a React web app for customers, couriers and business partners, an AI ordering assistant, and an Express/Prisma API. It started as a student project at the European Campus Rottal-Inn (THD).
 
@@ -46,7 +46,7 @@ Pricing lives in `src/lib/pricing.ts` and has unit tests in `src/lib/pricing.tes
 
 ## Service area
 
-Bringo currently serves Pfarrkirchen (84347) only. `src/lib/zones.ts` recognises nearby towns (Bad Birnbach, Eggenfelden, Postmünster) so the order form can tell customers they are outside the area.
+Bringo currently serves Pfarrkirchen (84347) and Postmünster (84389). The map is locked to this area: you can zoom in but not out past it. `src/lib/zones.ts` recognises other nearby towns (Bad Birnbach, Eggenfelden) so the order form can tell customers they are outside the area.
 
 ## AI assistant
 

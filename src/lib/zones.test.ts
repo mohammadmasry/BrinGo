@@ -25,8 +25,9 @@ describe('detectPostcode', () => {
 })
 
 describe('isInServiceArea', () => {
-  it('accepts Pfarrkirchen', () => {
+  it('accepts Pfarrkirchen and Postmünster', () => {
     expect(isInServiceArea('84347')).toBe(true)
+    expect(isInServiceArea('84389')).toBe(true)
   })
   it('rejects other towns', () => {
     expect(isInServiceArea('84364')).toBe(false)

@@ -1,9 +1,9 @@
-// Bringo currently serves Pfarrkirchen only.
-export const SERVICE_AREA = { name: 'Pfarrkirchen', zips: ['84347'] }
+// Bringo currently serves Pfarrkirchen and Postmünster.
+export const SERVICE_AREA = { name: 'Pfarrkirchen', zips: ['84347', '84389'] }
 
 // Rough box around Pfarrkirchen, used to lock the map and the address search.
-// Covers the town plus Reichenberg / Untergrasensee, and leaves out Postmünster to the west.
-export const SERVICE_BOUNDS = { south: 48.410, west: 12.915, north: 48.452, east: 12.985 }
+// Covers the town, Reichenberg / Untergrasensee and Postmünster to the west.
+export const SERVICE_BOUNDS = { south: 48.405, west: 12.885, north: 48.458, east: 12.995 }
 export const SERVICE_BBOX = `${SERVICE_BOUNDS.west},${SERVICE_BOUNDS.south},${SERVICE_BOUNDS.east},${SERVICE_BOUNDS.north}`
 
 // Nearby towns are recognised so we can tell customers they're outside the area.
