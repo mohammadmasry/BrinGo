@@ -7,11 +7,26 @@ import { calculatePrice, getUpcomingRounds, type Schedule, type UpcomingRound } 
 import { setActiveOrder } from '../lib/orderStore'
 import { detectPostcode, isInServiceArea, SERVICE_BBOX } from '../lib/zones'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
+import { STORES, CATEGORY_ICON } from '../lib/stores'
 
-const PICKUP_PRESETS = [
+interface Preset {
+  label: string
+  lat: number
+  lon: number
+  postcode?: string
+  chip?: { text: string; bg: string; fg: string; icon: string }
+}
+
+// Shopping orders: the real stores (same data as the map badges)
+const STORE_PRESETS: Preset[] = STORES.map(s => ({
+  label: s.name, lat: s.lat, lon: s.lon, postcode: '84347',
+  chip: { text: s.label, bg: s.bg, fg: s.fg, icon: CATEGORY_ICON[s.category] },
+}))
+
+// Delivery-only orders: common pickup places
+const PICKUP_PRESETS: Preset[] = [
   { label: 'CAMPUS Pfarrkirchen, Petersbogen 1', lat: 48.4352, lon: 12.9512 },
   { label: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', lat: 48.4381, lon: 12.9438 },
-  { label: 'Edeka, Griesbacher Str. 3', lat: 48.4393, lon: 12.9519 },
   { label: 'Stadtplatz 1, 84347 Pfarrkirchen', lat: 48.4369, lon: 12.9480 },
 ]
 
@@ -192,7 +207,7 @@ interface AddressFieldProps {
   label: string
   suggestions: NomResult[]
   onSelect: (label: string, coords: Coords, hasHouseNum?: boolean, postcode?: string) => void
-  presets: { label: string; lat: number; lon: number; postcode?: string }[]
+  presets: Preset[]
   coordsSet: boolean
   orChoose: string
 }
@@ -251,6 +266,29 @@ function AddressField({
       </div>
 
       <p className="text-xs text-gray-400 mt-3 mb-2">{orChoose}</p>
+      {presets.some(p => p.chip) ? (
+        <div className="grid grid-cols-3 gap-1.5">
+          {presets.map(p => {
+            const sel = value === p.label
+            return (
+              <button
+                key={p.label}
+                onClick={() => onSelect(p.label, { lat: p.lat, lon: p.lon }, true, p.postcode)}
+                title={p.label}
+                aria-label={p.label}
+                aria-pressed={sel}
+                className="flex items-center justify-center px-1.5 py-2 rounded-xl border-2 transition-all"
+                style={{ borderColor: sel ? '#16a34a' : '#f3f4f6', background: sel ? '#f0fdf4' : '#f9fafb' }}
+              >
+                <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-extrabold whitespace-nowrap max-w-full overflow-hidden"
+                  style={{ background: p.chip!.bg, color: p.chip!.fg, boxShadow: '0 0 0 1px rgba(0,0,0,0.08)' }}>
+                  <span aria-hidden="true">{p.chip!.icon}</span>{p.chip!.text}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      ) : (
       <div className="space-y-1.5">
         {presets.map(p => (
           <button
@@ -272,6 +310,7 @@ function AddressField({
           </button>
         ))}
       </div>
+      )}
     </div>
   )
 }
@@ -596,7 +635,7 @@ export default function CreateDeliveryPage() {
                     label={t.pickupLabel}
                     suggestions={pickupFocused ? pickupSugs : []}
                     onSelect={selectPickup}
-                    presets={PICKUP_PRESETS}
+                    presets={orderType === 'shopping' ? STORE_PRESETS : PICKUP_PRESETS}
                     coordsSet={!!pickupCoords}
                     orChoose={t.orChoose}
                   />

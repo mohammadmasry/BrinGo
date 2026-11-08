@@ -98,7 +98,6 @@ export function calculatePrice(opts: {
 const COORDS: Record<string, [number, number]> = {
   'CAMPUS Pfarrkirchen, Petersbogen 1':    [48.4247, 12.9398],
   'Bahnhof Pfarrkirchen, Bahnhofstr. 1':   [48.4320, 12.9307],
-  'Edeka, Griesbacher Str. 3':             [48.4298, 12.9345],
   'Stadtplatz 1, 84347 Pfarrkirchen':      [48.4307, 12.9378],
   'Stadtplatz 12, 84347 Pfarrkirchen':     [48.4307, 12.9380],
   'Ludwigstraße 8, 84347 Pfarrkirchen':    [48.4315, 12.9365],
