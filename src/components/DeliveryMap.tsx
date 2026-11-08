@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { SERVICE_BOUNDS } from '../lib/zones'
-import { STORES, CATEGORY_ICON, type Store } from '../lib/stores'
+import { STORES, storeIcon as storeEmoji, type Store } from '../lib/stores'
 
 const AREA = L.latLngBounds(
   [SERVICE_BOUNDS.south, SERVICE_BOUNDS.west],
@@ -31,7 +31,7 @@ const STORE_LABEL_ZOOM = 15
 function storeIcon(s: Store) {
   return L.divIcon({
     className: 'store-badge',
-    html: `<div class="store-pill" style="background:${s.bg};color:${s.fg}"><span class="store-ico">${CATEGORY_ICON[s.category]}</span><span class="store-label">${s.label}</span></div>`,
+    html: `<div class="store-pill" style="background:${s.bg};color:${s.fg}"><span class="store-ico">${storeEmoji(s)}</span><span class="store-label">${s.label}</span></div>`,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   })

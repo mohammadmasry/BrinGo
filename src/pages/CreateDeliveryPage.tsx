@@ -7,20 +7,22 @@ import { calculatePrice, getUpcomingRounds, type Schedule, type UpcomingRound } 
 import { setActiveOrder } from '../lib/orderStore'
 import { detectPostcode, isInServiceArea, SERVICE_BBOX } from '../lib/zones'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
-import { STORES, CATEGORY_ICON } from '../lib/stores'
+import { STORES, storeIcon, isFoodStore } from '../lib/stores'
 
 interface Preset {
   label: string
   lat: number
   lon: number
   postcode?: string
+  group?: 'stores' | 'food'
   chip?: { text: string; bg: string; fg: string; icon: string }
 }
 
 // Shopping orders: the real stores (same data as the map badges)
 const STORE_PRESETS: Preset[] = STORES.map(s => ({
   label: s.name, lat: s.lat, lon: s.lon, postcode: '84347',
-  chip: { text: s.label, bg: s.bg, fg: s.fg, icon: CATEGORY_ICON[s.category] },
+  group: s.category === 'food' ? 'food' : 'stores',
+  chip: { text: s.label, bg: s.bg, fg: s.fg, icon: storeIcon(s) },
 }))
 
 // Delivery-only orders: common pickup places
@@ -67,6 +69,8 @@ const tr = {
     roundCutoff: 'Bestellschluss', noRounds: 'Gerade ist keine Runde buchbar.',
     urgentLabel: 'Dringend', urgentSub: 'Eigene Fahrt, ca. 45 Min.',
     outsideArea: 'Bringo liefert derzeit nur in Pfarrkirchen und Postmünster.',
+    groupStores: 'Geschäfte', groupFood: 'Essen zum Abholen',
+    foodUrgentNote: 'Essen wird warm abgeholt und direkt geliefert. Deshalb geht es nur als dringende Lieferung.',
     // step 5
     s5Title: 'Bestellung prüfen', s5Sub: 'Alles korrekt?',
     orderTypeBadgeShopping: 'Einkauf', orderTypeBadgeDelivery: 'Lieferung',
@@ -120,6 +124,8 @@ const tr = {
     roundCutoff: 'Order by', noRounds: 'No round can be booked right now.',
     urgentLabel: 'Urgent', urgentSub: 'Dedicated trip, about 45 min',
     outsideArea: 'Bringo currently delivers in Pfarrkirchen and Postmünster only.',
+    groupStores: 'Stores', groupFood: 'Food to pick up',
+    foodUrgentNote: 'Food is collected hot and brought straight to you, so it can only be an urgent delivery.',
     // step 5
     s5Title: 'Review order', s5Sub: 'Everything look right?',
     orderTypeBadgeShopping: 'Shopping', orderTypeBadgeDelivery: 'Delivery',
@@ -210,11 +216,12 @@ interface AddressFieldProps {
   presets: Preset[]
   coordsSet: boolean
   orChoose: string
+  groupLabels?: Record<'stores' | 'food', string>
 }
 
 function AddressField({
   id, value, onChange, onFocus, onBlur, placeholder, label,
-  suggestions, onSelect, presets, coordsSet, orChoose,
+  suggestions, onSelect, presets, coordsSet, orChoose, groupLabels,
 }: AddressFieldProps) {
   return (
     <div>
@@ -267,8 +274,12 @@ function AddressField({
 
       <p className="text-xs text-gray-400 mt-3 mb-2">{orChoose}</p>
       {presets.some(p => p.chip) ? (
+        <div className="space-y-3">
+        {(['stores', 'food'] as const).filter(g => presets.some(p => p.group === g)).map(g => (
+        <div key={g}>
+        {groupLabels && <p className="text-xs font-semibold text-gray-500 mb-1.5">{groupLabels[g]}</p>}
         <div className="grid grid-cols-3 gap-1.5">
-          {presets.map(p => {
+          {presets.filter(p => p.group === g).map(p => {
             const sel = value === p.label
             return (
               <button
@@ -287,6 +298,9 @@ function AddressField({
               </button>
             )
           })}
+        </div>
+        </div>
+        ))}
         </div>
       ) : (
       <div className="space-y-1.5">
@@ -415,6 +429,9 @@ export default function CreateDeliveryPage() {
     else if (step === 2) selectDropoff(address, { lat, lon }, hasHouseNum, postcode)
   }
 
+  const foodPickup = isFoodStore(pickup)
+  useEffect(() => { if (foodPickup) setSchedule('urgent') }, [foodPickup])
+
   const pickupInArea = isInServiceArea(detectPostcode(pickup))
   const dropoffInArea = isInServiceArea(dropoffPostcode ?? detectPostcode(dropoff))
   const round = rounds.find(r => r.dateIso === selectedRound) ?? null
@@ -428,7 +445,7 @@ export default function CreateDeliveryPage() {
     : step === 1 ? pickupInArea !== false && (pickupCoords ? (pickupHasHouseNum || pickupHouseNum.trim().length > 0) : pickup.trim().length > 2)
     : step === 2 ? dropoffInArea !== false && (dropoffCoords ? (dropoffHasHouseNum || dropoffHouseNum.trim().length > 0) : dropoff.trim().length > 2)
     : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : true)
-    : step === 4 ? schedule === 'urgent' || round !== null
+    : step === 4 ? schedule === 'urgent' || (!foodPickup && round !== null)
     : step === 5 ? pickup.trim().length > 0 && dropoff.trim().length > 0 && (schedule === 'urgent' || round !== null)
     : true
 
@@ -636,6 +653,7 @@ export default function CreateDeliveryPage() {
                     suggestions={pickupFocused ? pickupSugs : []}
                     onSelect={selectPickup}
                     presets={orderType === 'shopping' ? STORE_PRESETS : PICKUP_PRESETS}
+                    groupLabels={{ stores: t.groupStores, food: t.groupFood }}
                     coordsSet={!!pickupCoords}
                     orChoose={t.orChoose}
                   />
@@ -829,6 +847,9 @@ export default function CreateDeliveryPage() {
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
             <p className="text-gray-400 text-sm mb-5">{t.s4Sub}</p>
 
+            {foodPickup ? (
+              <p className="text-sm font-semibold px-3 py-2.5 rounded-xl mb-1" style={{ background: '#fffbeb', color: '#92400e' }}>{t.foodUrgentNote}</p>
+            ) : (<>
             <p className="text-sm font-semibold text-gray-700 mb-1">{t.roundsTitle}</p>
             <p className="text-xs text-gray-400 mb-3">{t.roundsSub}</p>
             <div className="space-y-2">
@@ -852,6 +873,7 @@ export default function CreateDeliveryPage() {
                 )
               })}
             </div>
+            </>)}
 
             <button
               onClick={() => setSchedule('urgent')}

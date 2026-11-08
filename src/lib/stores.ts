@@ -2,7 +2,7 @@
 // Locations come from OpenStreetMap (© OpenStreetMap contributors, ODbL), queried Nov 2026.
 // Badges use approximate brand colours with the store name as text. They are not the official logos.
 
-export type StoreCategory = 'supermarket' | 'drugstore' | 'diy' | 'variety'
+export type StoreCategory = 'supermarket' | 'drugstore' | 'diy' | 'variety' | 'food'
 
 export interface Store {
   id: string
@@ -13,6 +13,7 @@ export interface Store {
   lon: number
   bg: string           // badge background
   fg: string           // badge text colour
+  icon?: string        // overrides the category icon (e.g. cuisine for food)
 }
 
 export const CATEGORY_ICON: Record<StoreCategory, string> = {
@@ -20,7 +21,13 @@ export const CATEGORY_ICON: Record<StoreCategory, string> = {
   drugstore: '🧴',
   diy: '🔨',
   variety: '🏷️',
+  food: '🍽️',
 }
+
+export const storeIcon = (s: Store) => s.icon ?? CATEGORY_ICON[s.category]
+
+/** Food is collected hot, so it can't wait for a shopping round. */
+export const isFoodStore = (name: string) => STORES.some(s => s.name === name && s.category === 'food')
 
 export const STORES: Store[] = [
   // Supermarkets
@@ -43,4 +50,12 @@ export const STORES: Store[] = [
   { id: 'segl',     name: 'Baumarkt Segl Pfarrkirchen', label: 'Segl',    category: 'diy',         lat: 48.41608, lon: 12.93967, bg: '#1f2937', fg: '#ffffff' },
   { id: 'baywa',    name: 'BayWa Bau- & Gartenmarkt Pfarrkirchen', label: 'BayWa', category: 'diy', lat: 48.41698, lon: 12.93896, bg: '#00843d', fg: '#ffffff' },
   { id: 'sonderpreis', name: 'Sonderpreis Baumarkt Pfarrkirchen', label: 'Sonderpreis', category: 'diy', lat: 48.41890, lon: 12.94011, bg: '#ffd500', fg: '#1f2937' },
+  // Food to pick up (takeaway). Sit-down restaurants are only added once confirmed they do pickup.
+  { id: 'mcdonalds', name: "McDonald's Pfarrkirchen, Südeinfahrt 3", label: "McDonald's", category: 'food', icon: '🍔', lat: 48.41741, lon: 12.94597, bg: '#da291c', fg: '#ffc72c' },
+  { id: 'doenerworks', name: 'Dönerworks Pfarrkirchen', label: 'Dönerworks', category: 'food', icon: '🥙', lat: 48.41787, lon: 12.94249, bg: '#fff7ed', fg: '#9a3412' },
+  { id: 'nextlevel', name: 'Nextlevel Pfarrkirchen', label: 'Nextlevel', category: 'food', icon: '🥙', lat: 48.43121, lon: 12.93837, bg: '#fff7ed', fg: '#9a3412' },
+  { id: 'hong', name: 'Hong Kulinarik Pfarrkirchen', label: 'Hong', category: 'food', icon: '🥡', lat: 48.41786, lon: 12.94232, bg: '#fff7ed', fg: '#9a3412' },
+  { id: 'wasner', name: 'Metzgerei Wasner Pfarrkirchen', label: 'Wasner', category: 'food', icon: '🍖', lat: 48.41786, lon: 12.94224, bg: '#fff7ed', fg: '#9a3412' },
+  { id: 'fiume', name: 'Pizzeria Fiume Pfarrkirchen, Eggenfeldener Str. 6', label: 'Fiume', category: 'food', icon: '🍕', lat: 48.43241, lon: 12.93545, bg: '#fff7ed', fg: '#9a3412' },
+  { id: 'hamburgeria', name: 'Hamburgeria Pfarrkirchen', label: 'Hamburgeria', category: 'food', icon: '🍔', lat: 48.43221, lon: 12.93836, bg: '#fff7ed', fg: '#9a3412' },
 ]
