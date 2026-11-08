@@ -5,7 +5,7 @@ import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import { calculatePrice, getUpcomingRounds, type Schedule, type UpcomingRound } from '../lib/pricing'
 import { setActiveOrder } from '../lib/orderStore'
-import { detectPostcode, isInServiceArea } from '../lib/zones'
+import { detectPostcode, isInServiceArea, SERVICE_BBOX } from '../lib/zones'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
 const PICKUP_PRESETS = [
@@ -340,7 +340,7 @@ export default function CreateDeliveryPage() {
     pickupTimer.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(pickup)}&limit=6&bbox=12.88,48.40,13.00,48.46&lang=${lang}`,
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(pickup)}&limit=6&bbox=${SERVICE_BBOX}&lang=${lang}`,
         )
         const data = await r.json()
         setPickupSugs((data.features ?? []).map(photonToNomResult).filter((x: NomResult | null): x is NomResult => x !== null))
@@ -354,7 +354,7 @@ export default function CreateDeliveryPage() {
     dropoffTimer.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(dropoff)}&limit=6&bbox=12.88,48.40,13.00,48.46&lang=${lang}`,
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(dropoff)}&limit=6&bbox=${SERVICE_BBOX}&lang=${lang}`,
         )
         const data = await r.json()
         setDropoffSugs((data.features ?? []).map(photonToNomResult).filter((x: NomResult | null): x is NomResult => x !== null))

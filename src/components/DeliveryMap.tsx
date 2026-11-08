@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { SERVICE_BOUNDS } from '../lib/zones'
+
+const AREA = L.latLngBounds(
+  [SERVICE_BOUNDS.south, SERVICE_BOUNDS.west],
+  [SERVICE_BOUNDS.north, SERVICE_BOUNDS.east],
+)
 
 export interface Coords { lat: number; lon: number }
 
@@ -66,6 +72,9 @@ export default function DeliveryMap({
     const map = L.map(containerRef.current, {
       center: [48.4358, 12.9445],
       zoom: 14,
+      minZoom: 13,
+      maxBounds: AREA.pad(0.15),
+      maxBoundsViscosity: 1,
       zoomControl: false,
       attributionControl: false,
     })
@@ -76,11 +85,18 @@ export default function DeliveryMap({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
+    // Grey out everything outside Pfarrkirchen and outline the service area
+    const outer: L.LatLngExpression[] = [[-85, -180], [85, -180], [85, 180], [-85, 180]]
+    const inner: L.LatLngExpression[] = [AREA.getSouthWest(), AREA.getNorthWest(), AREA.getNorthEast(), AREA.getSouthEast()]
+    L.polygon([outer, inner], { stroke: false, fillColor: '#0f172a', fillOpacity: 0.25, interactive: false }).addTo(map)
+    L.rectangle(AREA, { color: '#16a34a', weight: 2, dashArray: '6 6', fill: false, interactive: false }).addTo(map)
+
     L.control.attribution({ position: 'bottomleft', prefix: false })
       .addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors')
       .addTo(map)
 
     map.on('click', async (e) => {
+      if (!AREA.contains(e.latlng)) return
       const { lat, lng } = e.latlng
       try {
         const res = await fetch(

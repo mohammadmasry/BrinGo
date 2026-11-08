@@ -1,6 +1,10 @@
 // Bringo currently serves Pfarrkirchen only.
 export const SERVICE_AREA = { name: 'Pfarrkirchen', zips: ['84347'] }
 
+// Rough box around Pfarrkirchen, used to lock the map and the address search.
+export const SERVICE_BOUNDS = { south: 48.40, west: 12.88, north: 48.46, east: 13.00 }
+export const SERVICE_BBOX = `${SERVICE_BOUNDS.west},${SERVICE_BOUNDS.south},${SERVICE_BOUNDS.east},${SERVICE_BOUNDS.north}`
+
 // Nearby towns are recognised so we can tell customers they're outside the area.
 const CITY_KEYWORDS: { words: string[]; zip: string }[] = [
   { words: ['bad birnbach', 'birnbach'],     zip: '84364' },
