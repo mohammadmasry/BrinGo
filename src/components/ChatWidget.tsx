@@ -42,7 +42,7 @@ const tr = {
 }
 
 const orderPrice = (o: DetectedOrder) =>
-  calculatePrice({ schedule: o.slotId === 'urgent' ? 'urgent' : 'round', orderType: 'delivery', size: o.size }).total
+  calculatePrice({ schedule: o.slotId === 'urgent' ? 'urgent' : 'round' }).total
 
 function TypingIndicator() {
   return (

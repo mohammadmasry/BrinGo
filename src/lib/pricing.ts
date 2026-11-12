@@ -6,9 +6,6 @@
 
 export const ROUND_PRICE = 8.50      // per order in a shared shopping round
 export const URGENT_PRICE = 15.00    // dedicated trip, within ~45 min
-export const EXTRA_STORE_FEE = 2.00  // per additional store (shopping only)
-export const LARGE_ITEM_FEE = 1.50   // large / heavy item (delivery only)
-export const MAX_STORES = 3
 
 // Membership (shown as info; billed outside the app for now)
 export const MEMBERSHIP_MONTHLY = { regular: 5.00, reduced: 3.00 }
@@ -68,30 +65,15 @@ export function getUpcomingRounds(now: Date = new Date(), count = 4): UpcomingRo
 
 export interface PriceBreakdown {
   base: number
-  storesSurcharge: number
-  largeSurcharge: number
   total: number
   isUrgent: boolean
 }
 
-export function calculatePrice(opts: {
-  schedule: Schedule
-  orderType: OrderType
-  size?: 'S' | 'M' | 'L'
-  stores?: number
-}): PriceBreakdown {
+/** Flat price per order: no surcharges for extra stores or package size. */
+export function calculatePrice(opts: { schedule: Schedule }): PriceBreakdown {
   const isUrgent = opts.schedule === 'urgent'
   const base = isUrgent ? URGENT_PRICE : ROUND_PRICE
-  const stores = Math.min(Math.max(opts.stores ?? 1, 1), MAX_STORES)
-  const storesSurcharge = opts.orderType === 'shopping' ? (stores - 1) * EXTRA_STORE_FEE : 0
-  const largeSurcharge = opts.orderType === 'delivery' && opts.size === 'L' ? LARGE_ITEM_FEE : 0
-  return {
-    base,
-    storesSurcharge,
-    largeSurcharge,
-    total: Math.round((base + storesSurcharge + largeSurcharge) * 100) / 100,
-    isUrgent,
-  }
+  return { base, total: base, isUrgent }
 }
 
 // Approximate GPS coords for preset Pfarrkirchen addresses (used for courier ETA)

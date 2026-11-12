@@ -61,7 +61,6 @@ interface Order {
   item?: string
   description?: string
   size: 'S' | 'M' | 'L'
-  price: number
   scheduleType?: 'now' | 'later'
   scheduleDate?: string
   scheduleTime?: string
@@ -198,7 +197,6 @@ export default function CourierActiveOrderPage() {
               <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: sc.bg, color: sc.text }}>
                 {sizeLabel}
               </span>
-              <span className="text-lg font-black text-green-600">€{order.price.toFixed(2)}</span>
             </div>
           </div>
         </div>

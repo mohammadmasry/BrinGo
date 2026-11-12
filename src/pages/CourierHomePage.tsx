@@ -7,15 +7,16 @@ import { getActiveOrder, setActiveOrder, type StoredOrder } from '../lib/orderSt
 
 interface MockOrder {
   id: string; pickup: string; dropoff: string
-  item: string; size: 'S' | 'M' | 'L'; price: number; distance: number; minsAgo: number
+  item: string; size: 'S' | 'M' | 'L'; distance: number; minsAgo: number
   scheduleType?: 'now' | 'later'; scheduleDate?: string; scheduleTime?: string
 }
 
+// Couriers are paid by the hour, so order cards show distance and size, not a price.
 const MOCK_ORDERS: MockOrder[] = [
-  { id: '1', pickup: 'CAMPUS Pfarrkirchen, Petersbogen 1', dropoff: 'Stadtplatz 12, 84347 Pfarrkirchen', item: 'Textbooks', size: 'M', price: 4.50, distance: 1.2, minsAgo: 3, scheduleType: 'now' },
-  { id: '2', pickup: 'Edeka, Griesbacher Str. 3, Pfarrkirchen', dropoff: 'Ludwigstraße 8, 84347 Pfarrkirchen', item: 'Grocery bag', size: 'M', price: 5.50, distance: 2.1, minsAgo: 7, scheduleType: 'later', scheduleDate: 'Fr 20.06.', scheduleTime: '14:00' },
-  { id: '3', pickup: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', dropoff: 'Ringstraße 44, 84347 Pfarrkirchen', item: 'Documents envelope', size: 'S', price: 3.20, distance: 0.8, minsAgo: 12, scheduleType: 'now' },
-  { id: '4', pickup: 'Rewe, Münchener Str. 8, Pfarrkirchen', dropoff: 'Kirchgasse 5, 84347 Pfarrkirchen', item: 'Medium box', size: 'M', price: 6.00, distance: 1.8, minsAgo: 19, scheduleType: 'later', scheduleDate: 'Sa 21.06.', scheduleTime: '10:00' },
+  { id: '1', pickup: 'CAMPUS Pfarrkirchen, Petersbogen 1', dropoff: 'Stadtplatz 12, 84347 Pfarrkirchen', item: 'Textbooks', size: 'M', distance: 1.2, minsAgo: 3, scheduleType: 'now' },
+  { id: '2', pickup: 'Edeka, Griesbacher Str. 3, Pfarrkirchen', dropoff: 'Ludwigstraße 8, 84347 Pfarrkirchen', item: 'Grocery bag', size: 'M', distance: 2.1, minsAgo: 7, scheduleType: 'later', scheduleDate: 'Fr 20.06.', scheduleTime: '14:00' },
+  { id: '3', pickup: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', dropoff: 'Ringstraße 44, 84347 Pfarrkirchen', item: 'Documents envelope', size: 'S', distance: 0.8, minsAgo: 12, scheduleType: 'now' },
+  { id: '4', pickup: 'Rewe, Münchener Str. 8, Pfarrkirchen', dropoff: 'Kirchgasse 5, 84347 Pfarrkirchen', item: 'Medium box', size: 'M', distance: 1.8, minsAgo: 19, scheduleType: 'later', scheduleDate: 'Sa 21.06.', scheduleTime: '10:00' },
 ]
 
 const SIZE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -93,8 +94,7 @@ function MockOrderCard({ order, onAccept, acceptLabel, minsAgoLabel, asapLabel }
           <ScheduleBadge scheduleType={order.scheduleType} scheduleDate={order.scheduleDate} scheduleTime={order.scheduleTime} asapLabel={asapLabel} />
         </div>
         <div className="text-right">
-          <p className="text-xl font-black text-gray-900">€{order.price.toFixed(2)}</p>
-          <p className="text-xs text-gray-400">{order.distance} km</p>
+          <p className="text-xl font-black text-gray-900">{order.distance} km</p>
         </div>
       </div>
       <div className="flex gap-3 mb-4">
@@ -148,8 +148,7 @@ function CustomerOrderCard({ order, onAccept, acceptLabel, asapLabel }: {
           <p className="text-sm text-gray-400 leading-tight">{order.dropoff}</p>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xl font-black text-gray-900">€{order.price.toFixed(2)}</p>
-          <p className="text-xs text-gray-400">{order.description}</p>
+          <p className="text-sm font-semibold text-gray-700">{order.description}</p>
         </div>
       </div>
       <button

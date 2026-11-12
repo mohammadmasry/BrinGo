@@ -38,8 +38,6 @@ Pricing lives in `src/lib/pricing.ts` and has unit tests in `src/lib/pricing.tes
 | --- | --- |
 | Shopping round (Tue & Fri, 09:00–12:00, order by 20:00 the evening before) | €8.50 per order |
 | Urgent (own trip, about 45 min) | €15.00 |
-| Each extra store (shopping) | +€2.00 |
-| Large / heavy package (delivery) | +€1.50 |
 | Membership (planned, not billed in the app) | €5 / month, €3 reduced |
 
 **Why rounds:** a courier costs about €18 an hour with Minijob employer costs (€13.90 × 1.31). A dedicated trip of about 45 minutes costs about €14, so a cheap single delivery loses money. A round of 3–4 orders in about 90 minutes brings this down to about €7 per order.

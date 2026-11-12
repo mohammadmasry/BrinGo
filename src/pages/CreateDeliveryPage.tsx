@@ -53,7 +53,7 @@ const tr = {
     // step 3 shopping
     s3TitleShopping: 'Einkaufsauftrag', s3SubShopping: 'Was und wo soll für Sie eingekauft werden?',
     shoppingListLabel: 'Einkaufszettel', shoppingListPh: 'z.B. Milch 1L, Brot (Vollkorn), 6 Eier…',
-    storesLabel: 'Anzahl der Läden (+€2 je weiterem Laden)', store1: 'Laden', store2: 'Läden', store3: 'Läden',
+    storesLabel: 'Anzahl der Läden', store1: 'Laden', store2: 'Läden', store3: 'Läden',
     itemsLabel: 'Anzahl der Artikel', itemsFew: 'wenige', itemsMed: 'mittel', itemsMany: 'viele',
     // step 3 delivery
     s3TitleDelivery: 'Was wird geliefert?', s3SubDelivery: 'Beschreiben Sie Ihr Paket für den Kurier.',
@@ -62,7 +62,7 @@ const tr = {
     sizeLabel: 'Paketgröße',
     sSmallTitle: 'Klein', sSmallSub: 'Umschlag, Dokumente',
     sMediumTitle: 'Mittel', sMediumSub: 'Bücher, Tragetasche',
-    sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile · +€1,50',
+    sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile',
     // step 4
     s4Title: 'Wann?', s4Sub: 'Wählen Sie eine Einkaufsrunde oder eine dringende Lieferung.',
     roundsTitle: 'Einkaufsrunden', roundsSub: 'Ein Kurier erledigt mehrere Aufträge in einer Runde. Deshalb ist es günstiger.',
@@ -89,7 +89,6 @@ const tr = {
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
     when: 'Wann', asap: 'Sofort', express: 'Express',
     priceRound: 'Einkaufsrunde', priceUrgent: 'Dringende Lieferung', priceTotal: 'Gesamt',
-    priceStores: 'Weitere Läden', priceLarge: 'Großes Paket',
     confirmTitle: 'Bestellung aufgegeben!', confirmSub: 'Dein Kurier wurde benachrichtigt.',
     confirmOrderNum: 'Bestellnummer', confirmEta: 'Lieferung',
     confirmEtaUrgent: 'ca. 45 Min.',
@@ -108,7 +107,7 @@ const tr = {
     // step 3 shopping
     s3TitleShopping: 'Shopping order', s3SubShopping: 'What should be bought and where?',
     shoppingListLabel: 'Shopping list', shoppingListPh: 'e.g. Milk 1L, Bread, 6 Eggs…',
-    storesLabel: 'Number of stores (+€2 per extra store)', store1: 'store', store2: 'stores', store3: 'stores',
+    storesLabel: 'Number of stores', store1: 'store', store2: 'stores', store3: 'stores',
     itemsLabel: 'Number of items', itemsFew: 'few', itemsMed: 'moderate', itemsMany: 'many',
     // step 3 delivery
     s3TitleDelivery: 'What are we delivering?', s3SubDelivery: 'Describe your package for the courier.',
@@ -117,7 +116,7 @@ const tr = {
     sizeLabel: 'Package size',
     sSmallTitle: 'Small', sSmallSub: 'Envelope, documents',
     sMediumTitle: 'Medium', sMediumSub: 'Books, bag',
-    sLargeTitle: 'Large', sLargeSub: 'Box, multiple items · +€1.50',
+    sLargeTitle: 'Large', sLargeSub: 'Box, multiple items',
     // step 4
     s4Title: 'When?', s4Sub: 'Choose a shopping round or an urgent delivery.',
     roundsTitle: 'Shopping rounds', roundsSub: 'One courier handles several orders in one round. That keeps it cheap.',
@@ -144,7 +143,6 @@ const tr = {
     dateLabel: 'Date', timeLabel: 'Time',
     when: 'When', asap: 'ASAP', express: 'Express',
     priceRound: 'Shopping round', priceUrgent: 'Urgent delivery', priceTotal: 'Total',
-    priceStores: 'Extra stores', priceLarge: 'Large package',
     confirmTitle: 'Order placed!', confirmSub: 'Your courier has been notified.',
     confirmOrderNum: 'Order number', confirmEta: 'Delivery',
     confirmEtaUrgent: 'about 45 min',
@@ -435,7 +433,7 @@ export default function CreateDeliveryPage() {
   const pickupInArea = isInServiceArea(detectPostcode(pickup))
   const dropoffInArea = isInServiceArea(dropoffPostcode ?? detectPostcode(dropoff))
   const round = rounds.find(r => r.dateIso === selectedRound) ?? null
-  const price = calculatePrice({ schedule, orderType: orderType ?? 'delivery', size, stores })
+  const price = calculatePrice({ schedule })
   const whenLabel = schedule === 'urgent'
     ? `${t.urgentLabel} · ${t.urgentSub}`
     : round ? `${formatRoundDay(round.dateIso, lang)} · ${round.label}` : '—'
@@ -856,7 +854,7 @@ export default function CreateDeliveryPage() {
               {rounds.length === 0 && <p className="text-sm text-gray-400 italic">{t.noRounds}</p>}
               {rounds.map(r => {
                 const sel = schedule === 'round' && selectedRound === r.dateIso
-                const roundPrice = calculatePrice({ schedule: 'round', orderType: orderType ?? 'delivery', size, stores }).total
+                const roundPrice = calculatePrice({ schedule: 'round' }).total
                 return (
                   <button key={r.dateIso}
                     onClick={() => { setSchedule('round'); setSelectedRound(r.dateIso) }}
@@ -889,7 +887,7 @@ export default function CreateDeliveryPage() {
                 </span>
               </span>
               <span className="text-sm font-black shrink-0 ml-3" style={{ color: '#92400e' }}>
-                €{calculatePrice({ schedule: 'urgent', orderType: orderType ?? 'delivery', size, stores }).total.toFixed(2)}
+                €{calculatePrice({ schedule: 'urgent' }).total.toFixed(2)}
               </span>
             </button>
           </div>
@@ -948,18 +946,6 @@ export default function CreateDeliveryPage() {
                   <span>{schedule === 'urgent' ? t.priceUrgent : t.priceRound}</span>
                   <span>€{price.base.toFixed(2)}</span>
                 </div>
-                {price.storesSurcharge > 0 && (
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>{t.priceStores} ({stores - 1})</span>
-                    <span>+ €{price.storesSurcharge.toFixed(2)}</span>
-                  </div>
-                )}
-                {price.largeSurcharge > 0 && (
-                  <div className="flex justify-between text-sm text-gray-500">
-                    <span>{t.priceLarge}</span>
-                    <span>+ €{price.largeSurcharge.toFixed(2)}</span>
-                  </div>
-                )}
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                   <span className="text-sm font-semibold text-gray-700">{t.priceTotal}</span>
                   <span className="text-3xl font-black text-gray-900">€{price.total.toFixed(2)}</span>

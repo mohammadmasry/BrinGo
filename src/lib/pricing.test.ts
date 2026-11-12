@@ -1,33 +1,20 @@
 import { describe, it, expect } from 'vitest'
-import { calculatePrice, getUpcomingRounds, localIso, ROUND_PRICE, URGENT_PRICE } from './pricing'
+import { calculatePrice, getUpcomingRounds, localIso } from './pricing'
 
 describe('calculatePrice', () => {
-  it('shopping round costs €8.50', () => {
-    expect(calculatePrice({ schedule: 'round', orderType: 'shopping' }).total).toBe(8.5)
+  it('order in a shopping round costs €8.50', () => {
+    const r = calculatePrice({ schedule: 'round' })
+    expect(r.total).toBe(8.5)
+    expect(r.isUrgent).toBe(false)
   })
   it('urgent order costs €15.00', () => {
-    const r = calculatePrice({ schedule: 'urgent', orderType: 'shopping' })
+    const r = calculatePrice({ schedule: 'urgent' })
     expect(r.total).toBe(15)
     expect(r.isUrgent).toBe(true)
   })
-  it('adds €2 per extra store for shopping', () => {
-    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', stores: 2 }).total).toBe(10.5)
-    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', stores: 3 }).total).toBe(12.5)
-  })
-  it('caps stores at 3', () => {
-    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', stores: 9 }).storesSurcharge).toBe(4)
-  })
-  it('ignores stores for deliveries', () => {
-    expect(calculatePrice({ schedule: 'round', orderType: 'delivery', stores: 3 }).storesSurcharge).toBe(0)
-  })
-  it('adds €1.50 for large deliveries only', () => {
-    expect(calculatePrice({ schedule: 'round', orderType: 'delivery', size: 'L' }).total).toBe(10)
-    expect(calculatePrice({ schedule: 'round', orderType: 'delivery', size: 'M' }).total).toBe(ROUND_PRICE)
-    expect(calculatePrice({ schedule: 'round', orderType: 'shopping', size: 'L' }).total).toBe(ROUND_PRICE)
-  })
-  it('total equals sum of components', () => {
-    const r = calculatePrice({ schedule: 'urgent', orderType: 'delivery', size: 'L' })
-    expect(r.total).toBe(URGENT_PRICE + r.largeSurcharge)
+  it('total equals the base price (no surcharges)', () => {
+    const r = calculatePrice({ schedule: 'round' })
+    expect(r.total).toBe(r.base)
   })
 })
 

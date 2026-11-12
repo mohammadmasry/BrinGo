@@ -18,7 +18,9 @@ export function detectPostcode(address: string): string | null {
   const explicit = address.match(/\b(\d{5})\b/)
   if (explicit) return explicit[1]
   const lower = address.toLowerCase()
-  return CITY_KEYWORDS.find(e => e.words.some(w => lower.includes(w)))?.zip ?? null
+  // Whole words only, so street names like "Eggenfeldener Straße" don't count as the town
+  const hasWord = (w: string) => new RegExp(`(?<![a-zäöüß])${w}(?![a-zäöüß])`).test(lower)
+  return CITY_KEYWORDS.find(e => e.words.some(hasWord))?.zip ?? null
 }
 
 /** true = inside, false = known to be outside, null = can't tell from the address. */

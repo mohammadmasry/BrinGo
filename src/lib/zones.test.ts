@@ -19,6 +19,14 @@ describe('detectPostcode', () => {
   it('returns null for unknown address', () => {
     expect(detectPostcode('Ringstraße 44')).toBeNull()
   })
+  it('ignores town names inside street names', () => {
+    expect(detectPostcode('Eggenfeldener Str. 6, Pfarrkirchen')).toBe('84347')
+    expect(detectPostcode('Birnbacher Straße 2')).toBeNull()
+  })
+  it('accepts every store and food place on the map', async () => {
+    const { STORES } = await import('./stores')
+    for (const s of STORES) expect(isInServiceArea(detectPostcode(s.name)), s.name).not.toBe(false)
+  })
   it('is case-insensitive', () => {
     expect(detectPostcode('BAD BIRNBACH')).toBe('84364')
   })

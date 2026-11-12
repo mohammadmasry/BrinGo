@@ -15,7 +15,7 @@ ABOUT BRINGO:
 SHOPPING ROUNDS & PRICES:
 - Shopping rounds: every Tuesday and Friday, 09:00–12:00. One courier shops for several customers in one round, which keeps it cheap.
 - Order deadline: 20:00 the evening before the round.
-- Price in a round: €8.50 per order (shopping or delivery). +€2.00 per extra store, +€1.50 for a large/heavy package.
+- Price in a round: €8.50 per order (shopping or delivery), no extra charges for more stores or bigger packages.
 - Urgent: a dedicated trip within about 45 minutes for €15.00.
 If a customer asks for the cheapest option → suggest the next shopping round.
 If they need it today or right now → offer urgent (€15).
